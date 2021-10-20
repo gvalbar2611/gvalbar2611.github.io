@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html>
+
+	<head>
+	
+		<title> Tarea 2: Formulario HTML </title>
+		
+	</head>
+	
+	<body>
+		 
+		 <header>
+		 
+			<h1> Ejercicios de Gabriel Valiente Barrera del Módulo de Lenguajes de Marcar y Sistemas de Gestión Empresarial </h1>
+		
+		</header>
+		
+		<form action="muchasgracias.html" method="get">
+		
+			<ul>
+				
+				<li>
+					<label for="name">Nombre:</label>
+					<input type="text" id="name" name="user_name" autofocus required>
+				</li>
+				
+				<li>
+					<label for="correo">Correo electrónico:</label>
+					<input type="email" id="correo" name="user_correo">
+				</li>
+				
+				<li>
+					<label for="url">url:</label>
+					<input type="url" id="url" name="user_url" placeholder="Escribe la URL de tu página web personal">
+				</li>
+				
+				<li>
+					<label for="fecha">fecha:</label>
+					<input type="date" id="fecha" name="user_fecha">
+				</li>
+				
+				<li>
+					<label for="tiempo">tiempo:</label>
+					<input type="time" id="tiempo" name="user_tiempo">
+				</li>
+				
+				<li>
+					<label for="hora">fecha y hora:</label>
+					<input type="datetime-local" id="hora" name="user_hora">
+				</li>
+				
+				<li>
+					<label for="mes">mes:</label>
+					<input type="month" id="mes" name="user_mes">
+				</li>
+				
+				<li>
+					<label for="semana">semana:</label>
+					<input type="week" id="semana" name="user_semana">
+				</li>
+				
+				<li>
+					<label for="numero">numero(min -10, max 10):</label>
+					<input type="number" id="numero" name="user_numero" min="-10" max="10">
+				</li>
+				
+				<li>
+					<label for="teléfono">teléfono:</label>
+					<input type="tel" id="teléfono" name="user_teléfono">
+				</li>
+				
+				<li>
+					<label for="término">término de busqueda:</label>
+					<input type="search" id="término" name="user_término">
+				</li>
+				
+				<li>
+					<label for="color">color favorito:</label>
+					<input type="color" id="color" name="user_color">
+				</li>
+				
+				<hr/>
+				
+				<p>Color de pelo</p>
+  					<input type="radio" id="negro" name="colorP" value="negro">
+  					<label for="negro">negro</label><br>
+ 					<input type="radio" id="rubio" name="colorP" value="rubio">
+ 					<label for="rubio">rubio</label><br>
+  					<input type="radio" id="moreno" name="colorP" value="moreno">
+  					<label for="moreno">moreno</label>
+  					
+  				<p> De donde eres</p>
+  					<input type="radio" id="español" name="nacionalidad" value="español">
+  					<label for="español">español</label><br>
+ 					<input type="radio" id="extranjero" name="nacionalidad" value="extranjero">
+ 					<label for="extranjero">rubio</label><br>
+				
+				<p> ¿Que navegadores usas?</p>
+				<input type="checkbox" id="navegador" name="navegador" value="chrome">
+  				<label for="navegador"> chrome</label><br>
+  				<input type="checkbox" id="navegador" name="navegador" value="explore">
+  				<label for="navegador"> explore</label><br>
+  				<input type="checkbox" id="navegador" name="navegador" value="mozilla">
+  				<label for="navegador"> mozilla</label><br><br>
+  				
+				  <label for="provincia">De que parte de andalucia eres:</label>
+  					<select name="provincia" id="provincia">
+    				<option value="huelva">huelva</option>
+    				<option value="sevilla">sevilla</option>
+    				<option value="cordoba">cordoba</option>
+    				<option value="jaen">jaen</option>
+    				<option value="malaga">malaga</option>
+    				<option value="granada">granada</option>
+    				<option value="cadiz">cadiz</option>
+    				<option value="almeria">almeria</option>
+ 					</select>
+				
+				 
+				<br>
+				<label for="pwd">Password:</label>
+  				<input type="password" id="pwd" name="pwd" minlength="3"pattern="[A-Za-z]{3}" ><br><br>
+				
+				<br>
+				 <input type="reset" /> 
+				 
+				<li>
+					<label for="enviar">enviar:</label>
+					<input type="submit" id="enviar" name="user_enviar">
+				</li>
+				
+			</ul>
+			
+		</form>
+		
+		<a href="index.html"> volver a la página de inicio </a>
+	</body>
+	
+</html>
