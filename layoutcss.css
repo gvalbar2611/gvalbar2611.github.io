@@ -1,0 +1,74 @@
+
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+	height: 100%;
+	display:flex;
+	flex-direction: column;
+
+}
+
+header {
+	height: 5em;
+	background-color: gray;
+}
+
+footer {
+	height: 5em;
+	background-color: blue;
+}
+
+.principal {
+	display:flex;
+	flex-direction:row;
+	
+	backgrouncolor:orange;
+	flex-grow: 1;
+	justify-content: space-around;
+}
+
+.izquierda {
+	flex-grow:1;
+	height: 20em;
+	background-color:orange;
+}
+
+.centro {
+	flex-grow:3;
+	height: 20em;
+	background-color:green;
+}
+
+.derecha {
+	flex-grow:1;
+	height: 20em;
+	background-color:orange;
+}
+
+@media only screen and (max-width: 750px) {
+ 
+ 
+.principal {
+	display:flex;
+	flex-direction:column;
+	backgrouncolor:red;
+	flex-grow: 1;
+	justify-content: space-around;
+}
+.izquierda {
+	background-color:yellow;
+}
+.centro {
+	background-color:blue;
+}
+.derecha {
+	background-color:yellow;
+}
+}
+
+
+
+
