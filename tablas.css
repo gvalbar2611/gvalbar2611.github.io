@@ -1,0 +1,52 @@
+equipos {
+    background-color: lightgreen;
+}
+
+equipo {
+    display: block;
+   border: lightyellow solid 1px;
+   width: 20em;
+   flex-wrap: wrap;
+   margin: 5px;
+   padding: 100px;
+}
+
+nombre {
+    font-size: 2em;
+    font-weight: bold;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    margin-left: 5em;
+}
+
+liga {
+    font-weight: bold;
+    display: block;
+}
+
+presidente {
+    display: block;
+}
+
+equipo[codigo="r1"] {
+    background-image: url(1.png);
+    background-repeat: no-repeat;
+    background-color: mediumorchid;
+}
+
+equipo[codigo="b2"] {
+    background-image: url(2.png);
+    background-repeat: no-repeat;
+    background-color: green;
+}
+
+
+equipo[codigo="bb3"] {
+    background-image: url(3.png);
+    background-repeat: no-repeat;
+    background-color: mediumblue;
+}
+
+equipo:hover {
+    font-style: italic;
+    background-color: mintcream;
+}
