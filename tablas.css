@@ -1,52 +1,40 @@
-equipos {
-    background-color: lightgreen;
+ies {
+  font-family: sans-serif;
 }
 
-equipo {
-    display: block;
-   border: lightyellow solid 1px;
-   width: 20em;
-   flex-wrap: wrap;
-   margin: 5px;
-   padding: 100px;
+nombreCentro {
+  display: block;
+  font-size: 150%;
+  margin: 10px;
+}
+
+web {
+  display: block;
+  margin: 10px;
+}
+
+ciclos {
+  counter-reset: cuentaciclos;
+}
+
+ciclo {
+  display: block;
+}
+
+nombre:before {
+  content: counter(cuentaciclos) ". ";
+  counter-increment: cuentaciclos;
 }
 
 nombre {
-    font-size: 2em;
-    font-weight: bold;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    margin-left: 5em;
+  display: block;
+  margin-top: 10px;
+  margin-left: 30px;
+  text-indent: -15px;
 }
 
-liga {
-    font-weight: bold;
-    display: block;
-}
-
-presidente {
-    display: block;
-}
-
-equipo[codigo="r1"] {
-    background-image: url(1.png);
-    background-repeat: no-repeat;
-    background-color: mediumorchid;
-}
-
-equipo[codigo="b2"] {
-    background-image: url(2.png);
-    background-repeat: no-repeat;
-    background-color: green;
-}
-
-
-equipo[codigo="bb3"] {
-    background-image: url(3.png);
-    background-repeat: no-repeat;
-    background-color: mediumblue;
-}
-
-equipo:hover {
-    font-style: italic;
-    background-color: mintcream;
+grado, decretoTitulo {
+  display: list-item;
+  list-style: disc inside;
+  margin-left: 40px;
 }
