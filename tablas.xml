@@ -2,7 +2,7 @@
 <?xml-stylesheet type="text/css" href="tablas.css"?>
 <ies>
   <nombreCentro>IES Abastos</nombreCentro>
-  <web>http://www.iesabastos.org</web>
+  <web>https://www.xn--iesguadalpea-khb.es/</web>
   <ciclos>
     <ciclo id="ASIR">
       <nombre>Administración de Sistemas Informáticos en Red</nombre>
