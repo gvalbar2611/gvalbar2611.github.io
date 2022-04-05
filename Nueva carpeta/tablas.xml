@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/css" href="tablas.css"?>
+<?xml-stylesheet type="text/css" href="/Nueva carpeta/tablas.css"?>
 <ies>
-  <nombreCentro>IES Abastos</nombreCentro>
-  <web>http://www.iesabastos.org</web>
+  <nombreCentro>IES Guadalpeña</nombreCentro>
+  <web>https://www.xn--iesguadalpea-khb.es/</web>
   <ciclos>
     <ciclo id="ASIR">
       <nombre>Administración de Sistemas Informáticos en Red</nombre>
