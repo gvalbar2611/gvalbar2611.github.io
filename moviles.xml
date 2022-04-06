@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="estilo.css"?>
+<!DOCTYPE moviles [
+    <!ELEMENT moviles (movil)* >
+<!ELEMENT movil (marca, bateria, ram, procesador?, memoria)*>
+<!ELEMENT marca (#PCDATA)>
+<!ELEMENT bateria (#PCDATA)>
+<!ELEMENT ram (#PCDATA)>
+<!ELEMENT procesador (#PCDATA)>
+<!ELEMENT memoria (#PCDATA)>
+]>
+
+<moviles>
+    <movil>
+        <marca> apple </marca>
+        <bateria> 2500 </bateria>
+        <ram> 6 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 64 </memoria>
+    </movil>
+
+    <movil>
+        <marca> samsung </marca>
+        <bateria> 4000 </bateria>
+        <ram> 5 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 128 </memoria>
+    </movil>
+
+    <movil>
+        <marca> huawei </marca>
+        <bateria> 3500 </bateria>
+        <ram> 4 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 128 </memoria>
+    </movil>
+
+    <movil>
+        <marca> xiaomi </marca>
+        <bateria> 5500 </bateria>
+        <ram> 6 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 254 </memoria>
+    </movil>
+
+    <movil>
+        <marca> oppo </marca>
+        <bateria> 4000 </bateria>
+        <ram> 6 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 128 </memoria>
+    </movil>
+
+    <movil>
+        <marca> sony </marca>
+        <bateria> 3500 </bateria>
+        <ram> 4 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 128 </memoria>
+    </movil>
+
+    <movil>
+        <marca> realme </marca>
+        <bateria> 3500 </bateria>
+        <ram> 4 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 64 </memoria>
+    </movil>
+
+    <movil>
+        <marca> lg </marca>
+        <bateria> 3000 </bateria>
+        <ram> 4 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 64 </memoria>
+    </movil>
+
+    <movil>
+        <marca> honor </marca>
+        <bateria> 4500 </bateria>
+        <ram> 6 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 254 </memoria>
+    </movil>
+
+    <movil>
+        <marca> nokia </marca>
+        <bateria> 2500 </bateria>
+        <ram> 1 </ram>
+        <procesador> 1 </procesador>
+        <memoria> 8 </memoria>
+    </movil>
+</moviles>
+
+
