@@ -2,7 +2,7 @@
 movil {
     display: flex;
     flex-direction: column;
-    background-color: rgb(192, 192, 192);
+    background-color: rgb(192, 102, 192);
 }
 
 marca{
@@ -17,7 +17,7 @@ bateria{
 }
 
 ram{
-    color: rgb(255, 65, 65);
+    color: rgb(255, 235, 65);
     font-size:18pt;
     font-style: Italic;
     font-weight: bold;
