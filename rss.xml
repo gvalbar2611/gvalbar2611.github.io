@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>GitHub de Gabriel</title>
+<link>https://gvalbar2611.github.io/</link>
+<description>Ejemplos de HTML, CSS y XML en GitHub de Gabriel</description>
+<item>
+<title>Ejercicios de Tablas</title>
+<link>https://gvalbar2611.github.io/EjerciciTablas2.html</link>
+<description>
+horario y ajedrez
+</description>
+</item>
+<item>
+<title>Flamenco</title>
+<link>https://gvalbar2611.github.io/PracticaFlamenco/flamenco.html</link>
+<description>Ejercicio de flamenco</description>
+</item>
+<item>
+<title>FERIA</title>
+<link>https://gvalbar2611.github.io/InformacionGeneral.html</link>
+<description>Feria de ciclos</description>
+</item>
+<item>
+<title>Pagina Principal</title>
+<link>https://gvalbar2611.github.io/practica.html/PaginaPrincipal.html</link>
+<description>Pagina Principal</description>
+</item>
+</channel>
+</rss>
