@@ -65,12 +65,12 @@
             <xsl:choose>
             <xsl:when test="precio &gt; 20000">
                 <tr>
-                    <td style="color:green"> <xsl:value-of select= "marca"/> </td>
-                    <td style="color:green"> <xsl:value-of select= "modelo"/> </td>
-                    <td style="color:green"> <xsl:value-of select= "precio"/> </td>
-                    <td style="color:green"> <xsl:value-of select= "km"/> </td>
-                    <td style="color:green"> <xsl:value-of select= "anno"/> </td>
-                    <td style="color:green"> <xsl:value-of select= "potencia"/> </td>
+                    <td style="background:green"> <xsl:value-of select= "marca"/> </td>
+                    <td style="background:green"> <xsl:value-of select= "modelo"/> </td>
+                    <td style="background:green"> <xsl:value-of select= "precio"/> </td>
+                    <td style="background:green"> <xsl:value-of select= "km"/> </td>
+                    <td style="background:green"> <xsl:value-of select= "anno"/> </td>
+                    <td style="background:green"> <xsl:value-of select= "potencia"/> </td>
                 </tr>
             </xsl:when>
             <xsl:otherwise>
