@@ -27,6 +27,7 @@ td.libre:hover { background:#a5d6a7; }
 td.ocupado:hover { background:#ef6c6c; }         
 td.ocupado-filtro:hover { background:#999999; }  
 
+/* Responsive para móviles */
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; white-space: nowrap; }
   th, td { padding: 8px 5px; font-size: 14px; min-width: 60px; }
@@ -70,6 +71,7 @@ const firebaseConfig = {
   appId: "1:541388928781:web:89db455c12f67b3fee6244",
   measurementId: "G-LG0DL5RXP0"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -86,7 +88,6 @@ const weekLabel = document.getElementById("weekLabel");
 let showOnlyFree=false;
 let currentMonday = getMonday(new Date());
 
-// --- Funciones auxiliares ---
 function getMonday(d){
   const date = new Date(d);
   const day = date.getDay();
@@ -103,11 +104,9 @@ function crearTabla(){
     const thHora=document.createElement("th");
     thHora.textContent=hora;
     tr.appendChild(thHora);
-    dias.forEach(dia=>{
+    dias.forEach(_=>{
       const td=document.createElement("td");
       td.className="slot";
-      td.dataset.dia = dia;
-      td.dataset.hora = hora;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -155,75 +154,71 @@ function aplicarFiltro(){
   });
 }
 
-// --- Cargar semana ---
 function cargarSemana(){
   crearTabla();
   actualizarHeader();
-  db.ref("citas").off(); // limpia listeners anteriores
 
-  db.ref("citas").once("value").then(snap=>{
+  db.ref("citas").on("value", snap => {
     const data = snap.val() || {};
 
     tbody.querySelectorAll("tr").forEach((tr,rowIndex)=>{
-      horas.forEach((horaIndex)=>{
-        // Para cada celda
-      });
-    });
+      const hora = horas[rowIndex];
+      dias.forEach((dia,colIndex)=>{
+        const td = tr.children[colIndex + 1];
+        const key = `${dia}_${hora}`;
+        const val = data[key] || "";
 
-    // Aplicar clases a cada celda
-    tbody.querySelectorAll("td.slot").forEach(td=>{
-      const slotDate = new Date(currentMonday);
-      slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const key = `${td.dataset.dia}_${td.dataset.hora}`;
-      const val = data[key] || "";
-      td.textContent = val;
+        td.textContent = val;
+        td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
 
-      td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
-      const now = new Date(); now.setHours(0,0,0,0);
+        const slotDate = new Date(currentMonday);
+        slotDate.setDate(slotDate.getDate() + colIndex);
+        const now = new Date(); now.setHours(0,0,0,0);
 
-      if(slotDate < now){
-        td.classList.add("pasado");
-      } else if(val===""){
-        td.classList.add("libre");
-      } else {
-        td.classList.add("ocupado");
-        if(showOnlyFree){
-          td.classList.add("ocupado-filtro");
+        if(slotDate < now){
+          td.classList.add("pasado");
+        } else if(val===""){
+          td.classList.add("libre");
+        } else {
+          td.classList.add("ocupado");
+          if(showOnlyFree){
+            td.classList.add("ocupado-filtro");
+          }
         }
-      }
-
-      td.onclick = ()=>{
-        if(td.classList.contains("pasado")) return;
-
-        const input=document.createElement("input");
-        input.value=td.textContent;
-        td.textContent="";
-        td.appendChild(input);
-        input.focus();
-
-        input.onblur=()=>{
-          const newVal = input.value.trim();
-          db.ref("citas/"+key).set(newVal);
-          td.removeChild(input);
-        };
-        input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
-      };
+      });
     });
 
     aplicarFiltro();
     actualizarContador();
   });
 
-  weekLabel.textContent = `Semana del ${currentMonday.getDate()}/${currentMonday.getMonth()+1}`;
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    td.onclick = ()=>{
+      if(td.classList.contains("pasado")) return;
+
+      const input=document.createElement("input");
+      input.value=td.textContent;
+      td.textContent="";
+      td.appendChild(input);
+      input.focus();
+
+      const key = `${dias[td.cellIndex-1]}_${horas[td.parentElement.rowIndex]}`;
+
+      input.onblur=()=>{
+        const val=input.value.trim();
+        db.ref("citas/"+key).set(val);
+        td.removeChild(input);
+      };
+      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
+    };
+  });
 }
 
-// --- Botones ---
 document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-// --- Inicializar ---
 cargarSemana();
 </script>
 </body>
