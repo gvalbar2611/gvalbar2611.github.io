@@ -31,7 +31,7 @@ td.slot input {
 /* Estados de las celdas */
 td.libre input { background:#c8e6c9; cursor:text; }           
 td.ocupado input { background:#ef9a9a; cursor:text; }        
-td.ocupado-filtro input { background:#b0b0b0; cursor:text; } 
+td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; } 
 td.pasado input { background:#e0e0e0; cursor:not-allowed; }  
 
 td.libre:hover input { background:#a5d6a7; }           
@@ -155,40 +155,49 @@ function actualizarContador(){
   counterDiv.textContent="Clientes agendados: "+total;
 }
 
+// Aplica filtros y bloquea inputs
 function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
-    if(td.classList.contains("ocupado") && showOnlyFree){
-      td.classList.add("ocupado-filtro");
-    }
+
     const input = td.querySelector("input");
     if(td.classList.contains("pasado")){
-      td.classList.remove("libre","ocupado","ocupado-filtro");
-      td.classList.add("pasado");
       if(input) input.disabled = true;
-    } else if(input) {
+      return;
+    }
+
+    if(showOnlyFree && td.classList.contains("ocupado")){
+      td.classList.add("ocupado-filtro");
+      if(input) input.disabled = true;
+    } else if(input){
       input.disabled = false;
     }
   });
 }
 
 function actualizarEstado(td){
-  const val = td.querySelector("input").value.trim();
-  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+  const input = td.querySelector("input");
+  const val = input.value.trim();
+
+  // Calcular fecha y hora exacta del slot
   const slotDate = new Date(currentMonday);
   slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-  const now = new Date(); now.setHours(0,0,0,0);
+  const [hour, min] = td.dataset.hora.split(":").map(Number);
+  slotDate.setHours(hour, min, 0, 0);
+
+  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+
+  const now = new Date();
 
   if(slotDate < now){
     td.classList.add("pasado");
+    if(input) input.disabled = true;
   } else if(val===""){
     td.classList.add("libre");
   } else {
     td.classList.add("ocupado");
-    if(showOnlyFree){
-      td.classList.add("ocupado-filtro");
-    }
   }
+
   aplicarFiltro();
   actualizarContador();
 }
@@ -232,11 +241,13 @@ function cargarSemana(){
   });
 }
 
+// Botones
 document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
+// Inicializar
 cargarSemana();
 </script>
 </body>
