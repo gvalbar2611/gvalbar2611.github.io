@@ -5,48 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Citas Gavabarber</title>
 <style>
-body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
-h1 { text-align:center; color:#222; }
-.controls, .week-nav { display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; flex-wrap:wrap; gap:10px; }
-button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; }
+body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; text-align:center; }
+h1 { color:#222; }
+button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; margin:5px; }
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
-table { width:100%; border-collapse: collapse; margin-top:10px; }
-th, td { border:1px solid #ccc; padding:0; text-align:center; height:35px; }
+table { width:100%; border-collapse: collapse; margin-top:10px; text-align:center; }
+th, td { border:1px solid #ccc; padding:0; height:35px; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
 
-td.slot input {
-  width: 100%;
-  height: 100%;
-  border: none;
-  padding: 5px;
-  box-sizing: border-box;
-  text-align: center;
-  font-size: 14px;
-  background: transparent;
-}
+td.slot input { width: 100%; height: 100%; border:none; padding:5px; box-sizing:border-box; text-align:center; font-size:14px; background:transparent; }
+td.libre input { background:#c8e6c9; cursor:text; }
+td.ocupado input { background:#ef9a9a; cursor:text; }
+td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; }
+td.pasado input { background:#e0e0e0; cursor:not-allowed; }
+td.libre:hover input { background:#a5d6a7; }
+td.ocupado:hover input { background:#ef6c6c; }
+td.ocupado-filtro:hover input { background:#999999; }
 
-td.libre input { background:#c8e6c9; cursor:text; }           
-td.ocupado input { background:#ef9a9a; cursor:text; }        
-td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; } 
-td.pasado input { background:#e0e0e0; cursor:not-allowed; }  
-
-td.libre:hover input { background:#a5d6a7; }           
-td.ocupado:hover input { background:#ef6c6c; }         
-td.ocupado-filtro:hover input { background:#999999; }  
-
-thead th.dia {
-  background: #bbdefb; /* azul claro */
-  color: #0d47a1;
-  font-weight: bold;
-}
+thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
 
 @media (max-width: 768px) {
-  table { display: block; overflow-x: auto; white-space: nowrap; }
-  th, td { padding: 0 5px; font-size: 14px; min-width: 60px; height:30px; }
-  .controls, .week-nav { flex-direction: column; align-items: flex-start; gap: 5px; }
-  button { padding: 6px 10px; font-size: 14px; }
+  table { display:block; overflow-x:auto; white-space:nowrap; }
+  th, td { padding:0 5px; font-size:14px; min-width:60px; height:30px; }
+  button { padding:6px 10px; font-size:14px; }
 }
 </style>
 </head>
@@ -54,24 +37,32 @@ thead th.dia {
 
 <h1>Citas Gavabarber</h1>
 
-<div class="week-nav">
-  <button id="prevWeek">← Semana anterior</button>
-  <span id="weekLabel">Semana actual</span>
-  <button id="nextWeek">Semana siguiente →</button>
-</div>
-
-<div class="controls">
-  <button id="showAll">Mostrar todas las citas</button>
-  <button id="showFree">Mostrar solo libres</button>
+<!-- Pantalla de login -->
+<div id="loginScreen">
+  <h2>Inicia sesión para reservar tu cita</h2>
   <button id="loginBtn">Iniciar sesión con Google</button>
-  <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
-  <div id="counter">Clientes agendados: 0</div>
 </div>
 
-<table id="calendar">
-<thead><tr><th>Hora</th></tr></thead>
-<tbody></tbody>
-</table>
+<!-- Pantalla de calendario (oculta hasta login) -->
+<div id="calendarScreen" style="display:none;">
+  <div class="week-nav">
+    <button id="prevWeek">← Semana anterior</button>
+    <span id="weekLabel">Semana actual</span>
+    <button id="nextWeek">Semana siguiente →</button>
+  </div>
+
+  <div class="controls">
+    <button id="showAll">Mostrar todas las citas</button>
+    <button id="showFree">Mostrar solo libres</button>
+    <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
+    <div id="counter">Clientes agendados: 0</div>
+  </div>
+
+  <table id="calendar">
+    <thead><tr><th>Hora</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -94,7 +85,6 @@ const db = firebase.database();
 const auth = firebase.auth();
 
 let userLoggedIn = false;
-
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
 for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
@@ -126,7 +116,6 @@ function crearTabla(){
     const thHora=document.createElement("th");
     thHora.textContent=hora;
     tr.appendChild(thHora);
-
     dias.forEach(dia=>{
       const td=document.createElement("td");
       td.className="slot";
@@ -134,7 +123,6 @@ function crearTabla(){
       td.dataset.hora = hora;
       tr.appendChild(td);
     });
-
     tbody.appendChild(tr);
   });
 }
@@ -197,16 +185,12 @@ function aplicarFiltro(){
 function actualizarEstado(td){
   const input = td.querySelector("input");
   const val = input.value.trim();
-
   const slotDate = new Date(currentMonday);
   slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
   const [hour, min] = td.dataset.hora.split(":").map(Number);
   slotDate.setHours(hour, min, 0, 0);
-
   td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
-
   const now = new Date();
-
   if(slotDate < now){
     td.classList.add("pasado");
     if(input) input.disabled = true;
@@ -216,7 +200,6 @@ function actualizarEstado(td){
   } else {
     td.classList.add("ocupado");
   }
-
   aplicarFiltro();
   actualizarContador();
 }
@@ -228,12 +211,10 @@ function cargarSemana(){
 
   db.ref("citas").once("value").then(snap=>{
     const data = snap.val() || {};
-
     tbody.querySelectorAll("td.slot").forEach(td=>{
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
       const fechaStr = slotDate.toISOString().split('T')[0];
-
       const key = `${fechaStr}_${td.dataset.hora}`;
       const valObj = data[key] || {cliente:""};
 
@@ -244,7 +225,7 @@ function cargarSemana(){
         td.dataset.nombre = valObj.nombre || "";
         td.appendChild(input);
 
-        input.onblur = ()=>{ 
+        input.onblur = ()=>{
           if(!userLoggedIn) return;
           const user = auth.currentUser;
           db.ref("citas/"+key).set({
@@ -270,13 +251,12 @@ function cargarSemana(){
       } else {
         td.querySelector("input").value = valObj.cliente || "";
       }
-
       actualizarEstado(td);
     });
   });
 }
 
-// Botones
+// Botones filtros y navegación
 document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
@@ -285,24 +265,14 @@ document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(curren
 // Login Google
 loginBtn.onclick = ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(result=>{
-    userLoggedIn = true;
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    cargarSemana();
-  }).catch(error=>{
+  auth.signInWithPopup(provider).catch(error=>{
     alert("Error al iniciar sesión: " + error.message);
   });
 };
 
 // Logout
 logoutBtn.onclick = ()=>{
-  auth.signOut().then(()=>{
-    userLoggedIn = false;
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    cargarSemana();
-  }).catch(error=>{
+  auth.signOut().catch(error=>{
     alert("Error al cerrar sesión: " + error.message);
   });
 };
@@ -310,13 +280,11 @@ logoutBtn.onclick = ()=>{
 // Detectar cambios de estado de autenticación
 auth.onAuthStateChanged(user=>{
   userLoggedIn = !!user;
-  loginBtn.style.display = user ? "none" : "inline-block";
-  logoutBtn.style.display = user ? "inline-block" : "none";
+  document.getElementById("loginScreen").style.display = userLoggedIn ? "none" : "block";
+  document.getElementById("calendarScreen").style.display = userLoggedIn ? "block" : "none";
+  logoutBtn.style.display = userLoggedIn ? "inline-block" : "none";
   cargarSemana();
 });
-
-// Inicializar
-cargarSemana();
 </script>
 </body>
 </html>
