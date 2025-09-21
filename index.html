@@ -36,11 +36,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: white;
       margin: 5px 0;
       padding: 10px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: 0.2s;
     }
     .slot span {
       width: 60px;
@@ -65,6 +65,12 @@
     button.save:hover {
       background: #45a049;
     }
+    .libre {
+      background: #c8e6c9; /* verde claro */
+    }
+    .ocupado {
+      background: #ef9a9a; /* rojo claro */
+    }
   </style>
 </head>
 <body>
@@ -78,7 +84,7 @@
     const agendaDiv = document.getElementById("agenda");
     const diasDiv = document.getElementById("dias");
 
-    // Mostrar botones de días
+    // Crear botones de días
     dias.forEach(dia => {
       const btn = document.createElement("button");
       btn.textContent = dia;
@@ -87,9 +93,9 @@
     });
 
     function mostrarHoras(dia) {
-      agendaDiv.innerHTML = ""; // Limpiar agenda
+      agendaDiv.innerHTML = ""; // limpiar agenda
       const horas = [];
-      for (let h = 9; h <= 20; h++) { // De 9:00 a 20:00
+      for (let h = 9; h <= 20; h++) {
         horas.push(h + ":00");
         horas.push(h + ":30");
       }
@@ -104,15 +110,20 @@
         const input = document.createElement("input");
         input.placeholder = "Nombre cliente";
 
-        // Cargar datos guardados
-        const saved = localStorage.getItem(dia + "_" + hora);
+        const key = dia + "_" + hora;
+        const saved = localStorage.getItem(key);
         if (saved) input.value = saved;
+
+        // Cambiar color según ocupación
+        slot.classList.add(saved ? "ocupado" : "libre");
 
         const btn = document.createElement("button");
         btn.textContent = "Guardar";
         btn.className = "save";
         btn.onclick = () => {
-          localStorage.setItem(dia + "_" + hora, input.value);
+          localStorage.setItem(key, input.value);
+          slot.classList.toggle("ocupado", input.value.trim() !== "");
+          slot.classList.toggle("libre", input.value.trim() === "");
           alert("Cita guardada para " + dia + " a las " + hora);
         };
 
