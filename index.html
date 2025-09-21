@@ -98,7 +98,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-const adminUID = "TU_UID_DE_FIREBASE"; // reemplaza con tu UID real
 let userLoggedIn = false;
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
@@ -241,11 +240,19 @@ function cargarSemana(){
         const actualizarCita = ()=>{
           if(!userLoggedIn) return;
           const user = auth.currentUser;
-          db.ref("citas/"+key).set({
-            cliente: input.value.trim(),
-            uid: user.uid
-          });
-          td.dataset.uid = user.uid;
+          const nuevoValor = input.value.trim();
+
+          if(nuevoValor === "") {
+            db.ref("citas/"+key).remove();
+            td.dataset.uid = "";
+          } else {
+            db.ref("citas/"+key).set({
+              cliente: nuevoValor,
+              uid: user.uid
+            });
+            td.dataset.uid = user.uid;
+          }
+
           actualizarEstado(td);
         };
 
@@ -270,7 +277,7 @@ function cargarSemana(){
       } else if(userLoggedIn){
         input.disabled = false;
       } else {
-        input.disabled = true; // nadie logueado no puede escribir
+        input.disabled = true;
       }
 
       actualizarEstado(td);
@@ -284,28 +291,36 @@ document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFi
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-// Login y Logout
+// Login y logout
 loginBtn.onclick = ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(error=>{
-    alert("Error al iniciar sesión: "+error.message);
-  });
+  auth.signInWithPopup(provider)
+    .then(result=>{
+      userLoggedIn = true;
+      document.getElementById("loginScreen").style.display="none";
+      document.getElementById("calendarScreen").style.display="block";
+      logoutBtn.style.display="inline-block";
+      cargarSemana();
+    })
+    .catch(err=>{ alert("Error al iniciar sesión: "+err.message); });
 };
 
 logoutBtn.onclick = ()=>{
-  auth.signOut().catch(error=>{
-    alert("Error al cerrar sesión: "+error.message);
+  auth.signOut().then(()=>{
+    userLoggedIn = false;
+    document.getElementById("loginScreen").style.display="flex";
+    document.getElementById("calendarScreen").style.display="none";
   });
 };
 
-// Detectar cambios de estado de autenticación
+// Inicializar
 auth.onAuthStateChanged(user=>{
-  userLoggedIn = !!user;
-  document.getElementById("loginScreen").style.display = userLoggedIn ? "none" : "flex";
-  document.getElementById("calendarScreen").style.display = userLoggedIn ? "block" : "none";
-  logoutBtn.style.display = userLoggedIn ? "inline-block" : "none";
-  if(userLoggedIn){
-    cargarSemana(); // cargar tabla solo después de loguear
+  if(user){
+    userLoggedIn = true;
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("calendarScreen").style.display="block";
+    logoutBtn.style.display="inline-block";
+    cargarSemana();
   }
 });
 </script>
