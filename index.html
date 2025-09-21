@@ -6,15 +6,15 @@
 <title>Citas Gavabarber</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; text-align:center; }
-h1 { color:#222; margin-bottom:20px; }
-button { padding: 10px 16px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; margin:5px; font-size:16px; }
+h1 { color:#222; }
+button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; margin:5px; }
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
-
 table { width:100%; border-collapse: collapse; margin-top:10px; text-align:center; }
 th, td { border:1px solid #ccc; padding:0; height:35px; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
+
 td.slot input { width: 100%; height: 100%; border:none; padding:5px; box-sizing:border-box; text-align:center; font-size:14px; background:transparent; }
 td.libre input { background:#c8e6c9; cursor:text; }
 td.ocupado input { background:#ef9a9a; cursor:text; }
@@ -23,20 +23,13 @@ td.pasado input { background:#e0e0e0; cursor:not-allowed; }
 td.libre:hover input { background:#a5d6a7; }
 td.ocupado:hover input { background:#ef6c6c; }
 td.ocupado-filtro:hover input { background:#999999; }
+
 thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
-
-.week-nav { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-.controls { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:10px; gap:10px; }
-.buttons-left, .buttons-right { display:flex; gap:10px; align-items:center; }
-
-#loginScreen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; }
-#loginBtn { font-size:20px; padding:12px 20px; }
 
 @media (max-width: 768px) {
   table { display:block; overflow-x:auto; white-space:nowrap; }
   th, td { padding:0 5px; font-size:14px; min-width:60px; height:30px; }
   button { padding:6px 10px; font-size:14px; }
-  .controls { flex-direction:column; align-items:flex-start; gap:5px; }
 }
 </style>
 </head>
@@ -50,7 +43,7 @@ thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
   <button id="loginBtn">Iniciar sesión con Google</button>
 </div>
 
-<!-- Pantalla de calendario -->
+<!-- Pantalla de calendario (oculta hasta login) -->
 <div id="calendarScreen" style="display:none;">
   <div class="week-nav">
     <button id="prevWeek">← Semana anterior</button>
@@ -59,14 +52,10 @@ thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
   </div>
 
   <div class="controls">
-    <div class="buttons-left">
-      <button id="showAll">Mostrar todas las citas</button>
-      <button id="showFree">Mostrar solo libres</button>
-    </div>
-    <div class="buttons-right">
-      <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
-      <div id="counter">Clientes agendados: 0</div>
-    </div>
+    <button id="showAll">Mostrar todas las citas</button>
+    <button id="showFree">Mostrar solo libres</button>
+    <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
+    <div id="counter">Clientes agendados: 0</div>
   </div>
 
   <table id="calendar">
@@ -120,9 +109,160 @@ function getMonday(d){
   return date;
 }
 
-// Aquí continúa toda la lógica de crearTabla(), actualizarHeader(), actualizarEstado(), cargarSemana(), filtros y navegación...
-// (Mantén el código que ya tenías para manejar slots, firebase y autenticación)
+function crearTabla(){
+  tbody.innerHTML = "";
+  horas.forEach(hora=>{
+    const tr=document.createElement("tr");
+    const thHora=document.createElement("th");
+    thHora.textContent=hora;
+    tr.appendChild(thHora);
+    dias.forEach(dia=>{
+      const td=document.createElement("td");
+      td.className="slot";
+      td.dataset.dia = dia;
+      td.dataset.hora = hora;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
 
+function getWeekDates(monday){
+  return dias.map((dia,index)=>{
+    const d = new Date(monday);
+    d.setDate(d.getDate() + index);
+    const day = d.getDate().toString().padStart(2,'0');
+    const month = (d.getMonth()+1).toString().padStart(2,'0');
+    return `${dia} ${day}/${month}`;
+  });
+}
+
+function actualizarHeader(){
+  thead.querySelectorAll("th:not(:first-child)").forEach(th=>th.remove());
+  const fechas = getWeekDates(currentMonday);
+  fechas.forEach(fechaStr=>{
+    const th=document.createElement("th");
+    th.textContent = fechaStr;
+    th.classList.add("dia");
+    thead.appendChild(th);
+  });
+
+  const firstDay = new Date(currentMonday);
+  const lastDay = new Date(currentMonday);
+  lastDay.setDate(lastDay.getDate() + 6);
+  const formatDate = d => `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`;
+  weekLabel.textContent = `Semana: ${formatDate(firstDay)} - ${formatDate(lastDay)}`;
+  weekLabel.style.fontWeight = "bold";
+  weekLabel.style.color = "#1976d2";
+  weekLabel.style.fontSize = "16px";
+}
+
+function actualizarContador(){
+  let total=0;
+  tbody.querySelectorAll("td.slot input").forEach(input=>{
+    if(input.value.trim()!=="") total++;
+  });
+  counterDiv.textContent="Clientes agendados: "+total;
+}
+
+function aplicarFiltro(){
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    td.classList.remove("ocupado-filtro");
+    const input = td.querySelector("input");
+    if(td.classList.contains("pasado")){
+      if(input) input.disabled = true;
+      return;
+    }
+    if(showOnlyFree && td.classList.contains("ocupado")){
+      td.classList.add("ocupado-filtro");
+      if(input) input.disabled = true;
+    } else if(input){
+      input.disabled = !userLoggedIn ? true : false;
+    }
+  });
+}
+
+function actualizarEstado(td){
+  const input = td.querySelector("input");
+  const val = input.value.trim();
+  const slotDate = new Date(currentMonday);
+  slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
+  const [hour, min] = td.dataset.hora.split(":").map(Number);
+  slotDate.setHours(hour, min, 0, 0);
+  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+  const now = new Date();
+  if(slotDate < now){
+    td.classList.add("pasado");
+    if(input) input.disabled = true;
+  } else if(val===""){
+    td.classList.add("libre");
+    if(input && !userLoggedIn) input.disabled = true;
+  } else {
+    td.classList.add("ocupado");
+  }
+  aplicarFiltro();
+  actualizarContador();
+}
+
+function cargarSemana(){
+  crearTabla();
+  actualizarHeader();
+  db.ref("citas").off();
+
+  db.ref("citas").once("value").then(snap=>{
+    const data = snap.val() || {};
+    tbody.querySelectorAll("td.slot").forEach(td=>{
+      const slotDate = new Date(currentMonday);
+      slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
+      const fechaStr = slotDate.toISOString().split('T')[0];
+      const key = `${fechaStr}_${td.dataset.hora}`;
+      const valObj = data[key] || {cliente:""};
+
+      if(!td.querySelector("input")){
+        const input = document.createElement("input");
+        input.value = valObj.cliente || "";
+        td.dataset.uid = valObj.uid || "";
+        td.dataset.nombre = valObj.nombre || "";
+        td.appendChild(input);
+
+        input.onblur = ()=>{
+          if(!userLoggedIn) return;
+          const user = auth.currentUser;
+          db.ref("citas/"+key).set({
+            cliente: input.value.trim(),
+            uid: user.uid,
+            nombre: user.displayName
+          });
+          actualizarEstado(td);
+        };
+        input.onkeydown = e=>{
+          if(e.key==="Enter"){
+            if(!userLoggedIn) return;
+            const user = auth.currentUser;
+            db.ref("citas/"+key).set({
+              cliente: input.value.trim(),
+              uid: user.uid,
+              nombre: user.displayName
+            });
+            actualizarEstado(td);
+            input.blur();
+          }
+        };
+      } else {
+        td.querySelector("input").value = valObj.cliente || "";
+      }
+      actualizarEstado(td);
+    });
+  });
+}
+
+// Botones filtros y navegación
+document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
+document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
+document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
+document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
+
+// Login Google
 loginBtn.onclick = ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(error=>{
@@ -130,12 +270,14 @@ loginBtn.onclick = ()=>{
   });
 };
 
+// Logout
 logoutBtn.onclick = ()=>{
   auth.signOut().catch(error=>{
     alert("Error al cerrar sesión: " + error.message);
   });
 };
 
+// Detectar cambios de estado de autenticación
 auth.onAuthStateChanged(user=>{
   userLoggedIn = !!user;
   document.getElementById("loginScreen").style.display = userLoggedIn ? "none" : "block";
