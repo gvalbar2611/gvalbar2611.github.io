@@ -12,20 +12,17 @@ button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
 
 table { width:100%; border-collapse: collapse; margin-top:10px; text-align:center; }
-th, td { border:1px solid #ccc; padding:0; height:35px; vertical-align:top; }
+th, td { border:1px solid #ccc; padding:0; height:35px; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
-td.slot input { width: 100%; height: 100%; border:none; padding:2px; box-sizing:border-box; text-align:center; font-size:14px; background:transparent; }
-
+td.slot input { width: 100%; height: 100%; border:none; padding:5px; box-sizing:border-box; text-align:center; font-size:14px; background:transparent; }
 td.libre input { background:#c8e6c9; cursor:text; }
 td.ocupado input { background:#ef9a9a; cursor:text; }
 td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; }
 td.pasado input { background:#e0e0e0; cursor:not-allowed; }
-
 td.libre:hover input { background:#a5d6a7; }
 td.ocupado:hover input { background:#ef6c6c; }
 td.ocupado-filtro:hover input { background:#999999; }
-
 thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
 
 .week-nav { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
@@ -183,39 +180,28 @@ function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
     const input = td.querySelector("input");
-    const val = input ? input.value.trim() : "";
-
-    if(td.classList.contains("pasado") || !userLoggedIn){
+    if(td.classList.contains("pasado")){
       if(input) input.disabled = true;
       return;
     }
-
-    // Bloqueo si slot tiene uid y no es del usuario
-    if(td.dataset.uid && userLoggedIn && auth.currentUser.uid !== td.dataset.uid){
-      if(input) input.disabled = true;
-      td.classList.add("ocupado-filtro");
-    } else {
-      if(input) input.disabled = false;
-      td.classList.remove("ocupado-filtro");
-    }
-
     if(showOnlyFree && td.classList.contains("ocupado")){
       td.classList.add("ocupado-filtro");
       if(input) input.disabled = true;
+    } else if(input){
+      input.disabled = !userLoggedIn ? true : false;
     }
   });
 }
 
 function actualizarEstado(td){
-  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
   const input = td.querySelector("input");
   const val = input.value.trim();
   const slotDate = new Date(currentMonday);
   slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
   const [hour, min] = td.dataset.hora.split(":").map(Number);
   slotDate.setHours(hour, min, 0, 0);
+  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
   const now = new Date();
-
   if(slotDate < now){
     td.classList.add("pasado");
     if(input) input.disabled = true;
@@ -232,80 +218,79 @@ function cargarSemana(){
   crearTabla();
   actualizarHeader();
   db.ref("citas").off();
-
   db.ref("citas").once("value").then(snap=>{
     const data = snap.val() || {};
     tbody.querySelectorAll("td.slot").forEach(td=>{
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const fechaStr = slotDate.toISOString().split('T')[0];
       const key = `${fechaStr}_${td.dataset.hora}`;
-      const valObj = data[key] || {};
-      const val = valObj.value || "";
-      const uid = valObj.uid || "";
-
+      const valObj = data[key] || {cliente:""};
       if(!td.querySelector("input")){
         const input = document.createElement("input");
-        input.value = val;
-        td.dataset.uid = uid;
+        input.value = valObj.cliente || "";
+        td.dataset.uid = valObj.uid || "";
+        td.dataset.nombre = valObj.nombre || "";
         td.appendChild(input);
 
         input.onblur = ()=>{
-          if(userLoggedIn){
-            db.ref("citas/"+key).set({value: input.value.trim(), uid: auth.currentUser.uid});
-            td.dataset.uid = auth.currentUser.uid;
-            actualizarEstado(td);
-          }
+          if(!userLoggedIn) return;
+          const user = auth.currentUser;
+          db.ref("citas/"+key).set({
+            cliente: input.value.trim(),
+            uid: user.uid,
+            nombre: user.displayName
+          });
+          actualizarEstado(td);
         };
-
         input.onkeydown = e=>{
-          if(e.key==="Enter" && userLoggedIn){
-            db.ref("citas/"+key).set({value: input.value.trim(), uid: auth.currentUser.uid});
-            td.dataset.uid = auth.currentUser.uid;
+          if(e.key==="Enter"){
+            if(!userLoggedIn) return;
+            const user = auth.currentUser;
+            db.ref("citas/"+key).set({
+              cliente: input.value.trim(),
+              uid: user.uid,
+              nombre: user.displayName
+            });
             actualizarEstado(td);
             input.blur();
           }
         };
       } else {
-        td.querySelector("input").value = val;
-        td.dataset.uid = uid;
+        td.querySelector("input").value = valObj.cliente || "";
       }
-
       actualizarEstado(td);
     });
   });
 }
 
-// Login y Logout
-loginBtn.onclick = ()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(result=>{
-    userLoggedIn = true;
-    document.getElementById("loginScreen").style.display="none";
-    document.getElementById("calendarScreen").style.display="block";
-    logoutBtn.style.display="inline-block";
-    cargarSemana();
-  });
-};
-
-logoutBtn.onclick = ()=>{
-  auth.signOut().then(()=>{
-    userLoggedIn = false;
-    document.getElementById("loginScreen").style.display="flex";
-    document.getElementById("calendarScreen").style.display="none";
-  });
-};
-
-// Botones de filtro y navegación
+// Botones filtros y navegación
 document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-// Inicializar calendario (sin usuario logueado)
-crearTabla();
-actualizarHeader();
-aplicarFiltro();
+// Login y logout
+loginBtn.onclick = ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(error=>{
+    alert("Error al iniciar sesión: " + error.message);
+  });
+};
+logoutBtn.onclick = ()=>{
+  auth.signOut().catch(error=>{
+    alert("Error al cerrar sesión: " + error.message);
+  });
+};
+
+// Detectar cambios de estado de autenticación
+auth.onAuthStateChanged(user=>{
+  userLoggedIn = !!user;
+  document.getElementById("loginScreen").style.display = userLoggedIn ? "none" : "flex";
+  document.getElementById("calendarScreen").style.display = userLoggedIn ? "block" : "none";
+  logoutBtn.style.display = userLoggedIn ? "inline-block" : "none";
+  cargarSemana();
+});
 </script>
 </body>
 </html>
