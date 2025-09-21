@@ -3,6 +3,104 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Barbería Test Firebase</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+h1 { text-align:center; color:#222; }
+table { width:100%; border-collapse: collapse; margin-top:20px; }
+th, td { border:1px solid #ccc; padding:5px; text-align:center; }
+th { background:#2196f3; color:white; }
+td.slot { min-width:80px; cursor:pointer; position:relative; }
+td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
+td.libre { background:#c8e6c9; }
+td.ocupado { background:#ef9a9a; }
+</style>
+</head>
+<body>
+
+<h1>Agenda Barbería Test Firebase</h1>
+<table id="calendar">
+<thead><tr><th>Hora</th></tr></thead>
+<tbody></tbody>
+</table>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // 🔹 Pega aquí tu configuración de Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyAjXrpMMKPMc9KsrpZ_ymv8CMAKME8l0Fs",
+    authDomain: "agenda-barberia-59b4c.firebaseapp.com",
+    databaseURL: "https://agenda-barberia-59b4c-default-rtdb.firebaseio.com",
+    projectId: "agenda-barberia-59b4c",
+    storageBucket: "agenda-barberia-59b4c.firebasestorage.app",
+    messagingSenderId: "541388928781",
+    appId: "1:541388928781:web:89db455c12f67b3fee6244"
+    G-LG0DL5RXP0
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const horas=[];
+  for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
+
+  const table=document.getElementById("calendar");
+  const thead=table.querySelector("thead tr");
+  const tbody=table.querySelector("tbody");
+
+  // Añadir días al encabezado
+  dias.forEach(dia=>{ const th=document.createElement("th"); th.textContent=dia; thead.appendChild(th); });
+
+  // Crear filas por hora
+  horas.forEach(hora=>{
+    const tr=document.createElement("tr");
+    const thHora=document.createElement("th");
+    thHora.textContent=hora;
+    tr.appendChild(thHora);
+
+    dias.forEach(dia=>{
+      const td=document.createElement("td"); td.className="slot";
+      const key=dia+"_"+hora;
+
+      // Leer valor de Firebase y actualizar slot
+      db.ref("citas/"+key).on("value", snap=>{
+        const val = snap.val() || "";
+        td.textContent = val;
+        td.classList.toggle("libre", val==="");
+        td.classList.toggle("ocupado", val!=="");
+      });
+
+      // Editar slot al hacer clic
+      td.onclick=()=>{
+        const input=document.createElement("input");
+        input.value=td.textContent;
+        td.textContent="";
+        td.appendChild(input);
+        input.focus();
+
+        input.onblur=()=>{
+          const val=input.value.trim();
+          db.ref("citas/"+key).set(val); // guardar en Firebase
+          td.removeChild(input);
+        };
+        input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
+      };
+
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agenda Barbería Pro</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
