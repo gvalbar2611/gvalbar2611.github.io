@@ -14,125 +14,114 @@
       text-align: center;
       color: #222;
     }
-    .dias {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-      gap: 10px;
-      flex-wrap: wrap;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
     }
-    .dias button {
-      padding: 10px 15px;
-      border: none;
+    th, td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: center;
+    }
+    th {
       background: #2196f3;
       color: white;
-      border-radius: 6px;
+    }
+    td.slot {
+      min-width: 80px;
+      position: relative;
       cursor: pointer;
     }
-    .dias button:hover {
-      background: #1976d2;
-    }
-    .slot {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 5px 0;
-      padding: 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .slot span {
-      width: 60px;
-      font-weight: bold;
-    }
-    input {
-      flex: 1;
-      margin-left: 10px;
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    button.save {
-      margin-left: 10px;
-      padding: 5px 10px;
+    td input {
+      width: 100%;
       border: none;
-      background: #4caf50;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
+      padding: 5px;
+      box-sizing: border-box;
+      text-align: center;
+      background: transparent;
     }
-    button.save:hover {
-      background: #45a049;
+    td.libre {
+      background: #c8e6c9; /* verde */
     }
-    .libre {
-      background: #c8e6c9; /* verde claro */
-    }
-    .ocupado {
-      background: #ef9a9a; /* rojo claro */
+    td.ocupado {
+      background: #ef9a9a; /* rojo */
     }
   </style>
 </head>
 <body>
-  <h1>Agenda de Citas</h1>
-
-  <div class="dias" id="dias"></div>
-  <div id="agenda"></div>
+  <h1>Agenda de Citas - Mini Calendario</h1>
+  <table id="calendar">
+    <thead>
+      <tr>
+        <th>Hora</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
     const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const agendaDiv = document.getElementById("agenda");
-    const diasDiv = document.getElementById("dias");
+    const horas = [];
+    for (let h = 9; h <= 20; h++) {
+      horas.push(h + ":00");
+      horas.push(h + ":30");
+    }
 
-    // Crear botones de días
+    const table = document.getElementById("calendar");
+    const thead = table.querySelector("thead tr");
+    const tbody = table.querySelector("tbody");
+
+    // Añadir los días como columnas
     dias.forEach(dia => {
-      const btn = document.createElement("button");
-      btn.textContent = dia;
-      btn.onclick = () => mostrarHoras(dia);
-      diasDiv.appendChild(btn);
+      const th = document.createElement("th");
+      th.textContent = dia;
+      thead.appendChild(th);
     });
 
-    function mostrarHoras(dia) {
-      agendaDiv.innerHTML = ""; // limpiar agenda
-      const horas = [];
-      for (let h = 9; h <= 20; h++) {
-        horas.push(h + ":00");
-        horas.push(h + ":30");
-      }
+    // Crear filas por hora
+    horas.forEach(hora => {
+      const tr = document.createElement("tr");
+      const thHora = document.createElement("th");
+      thHora.textContent = hora;
+      tr.appendChild(thHora);
 
-      horas.forEach(hora => {
-        const slot = document.createElement("div");
-        slot.className = "slot";
-
-        const label = document.createElement("span");
-        label.textContent = hora;
-
-        const input = document.createElement("input");
-        input.placeholder = "Nombre cliente";
+      dias.forEach(dia => {
+        const td = document.createElement("td");
+        td.className = "slot";
 
         const key = dia + "_" + hora;
-        const saved = localStorage.getItem(key);
-        if (saved) input.value = saved;
+        const saved = localStorage.getItem(key) || "";
+        td.textContent = saved;
+        td.classList.add(saved.trim() === "" ? "libre" : "ocupado");
 
-        // Cambiar color según ocupación
-        slot.classList.add(saved ? "ocupado" : "libre");
+        // Hacer editable al hacer click
+        td.onclick = () => {
+          const input = document.createElement("input");
+          input.value = td.textContent;
+          td.textContent = "";
+          td.appendChild(input);
+          input.focus();
 
-        const btn = document.createElement("button");
-        btn.textContent = "Guardar";
-        btn.className = "save";
-        btn.onclick = () => {
-          localStorage.setItem(key, input.value);
-          slot.classList.toggle("ocupado", input.value.trim() !== "");
-          slot.classList.toggle("libre", input.value.trim() === "");
-          alert("Cita guardada para " + dia + " a las " + hora);
+          input.onblur = () => {
+            const val = input.value.trim();
+            localStorage.setItem(key, val);
+            td.removeChild(input);
+            td.textContent = val;
+            td.classList.toggle("libre", val === "");
+            td.classList.toggle("ocupado", val !== "");
+          };
+
+          input.onkeydown = (e) => {
+            if (e.key === "Enter") input.blur();
+          };
         };
 
-        slot.appendChild(label);
-        slot.appendChild(input);
-        slot.appendChild(btn);
-        agendaDiv.appendChild(slot);
+        tr.appendChild(td);
       });
-    }
+
+      tbody.appendChild(tr);
+    });
   </script>
 </body>
 </html>
