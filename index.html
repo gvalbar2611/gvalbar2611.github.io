@@ -61,7 +61,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+// ✅ Ahora incluye el domingo
+const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
 for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
 
