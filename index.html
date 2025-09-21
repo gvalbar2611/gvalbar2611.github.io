@@ -20,6 +20,14 @@ td.libre { background:#c8e6c9; }        /* verde */
 td.ocupado { background:#ef9a9a; }      /* rojo */
 td.ocupado.filtro { background:#cccccc; cursor: not-allowed; } /* gris cuando se filtra */
 td.pasado { background:#e0e0e0; cursor: not-allowed; } /* gris para días pasados */
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+  th, td { padding: 8px 5px; font-size: 14px; min-width: 60px; }
+  .controls, .week-nav { flex-direction: column; align-items: flex-start; gap: 5px; }
+  button { padding: 6px 10px; font-size: 14px; }
+}
 </style>
 </head>
 <body>
@@ -60,7 +68,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Añadimos domingo
+// Domingo incluido
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
 for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
@@ -131,7 +139,13 @@ function actualizarContador(){
 function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("filtro");
-    if(showOnlyFree && td.classList.contains("ocupado")) td.classList.add("filtro");
+    if(td.classList.contains("ocupado") && showOnlyFree){
+      td.classList.add("filtro"); // gris
+    }
+    if(td.classList.contains("pasado")){
+      td.classList.remove("libre","ocupado","filtro");
+      td.classList.add("pasado");
+    }
   });
 }
 
