@@ -39,95 +39,103 @@ td.ocupado { background:#ef9a9a; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // Configuración Firebase adaptada a HTML puro
-  const firebaseConfig = {
-    apiKey: "AIzaSyAjXrpMMKPMc9KsrpZ_ymv8CMAKME8l0Fs",
-    authDomain: "agenda-barberia-59b4c.firebaseapp.com",
-    databaseURL: "https://agenda-barberia-59b4c-default-rtdb.firebaseio.com",
-    projectId: "agenda-barberia-59b4c",
-    storageBucket: "agenda-barberia-59b4c.firebasestorage.app",
-    messagingSenderId: "541388928781",
-    appId: "1:541388928781:web:89db455c12f67b3fee6244",
-    measurementId: "G-LG0DL5RXP0"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAjXrpMMKPMc9KsrpZ_ymv8CMAKME8l0Fs",
+  authDomain: "agenda-barberia-59b4c.firebaseapp.com",
+  databaseURL: "https://agenda-barberia-59b4c-default-rtdb.firebaseio.com",
+  projectId: "agenda-barberia-59b4c",
+  storageBucket: "agenda-barberia-59b4c.firebasestorage.app",
+  messagingSenderId: "541388928781",
+  appId: "1:541388928781:web:89db455c12f67b3fee6244",
+  measurementId: "G-LG0DL5RXP0"
+};
 
-  // Inicializar Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-  const horas=[];
-  for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
+const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const horas=[];
+for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
 
-  const table=document.getElementById("calendar");
-  const thead=table.querySelector("thead tr");
-  const tbody=table.querySelector("tbody");
-  const counterDiv=document.getElementById("counter");
+const table=document.getElementById("calendar");
+const thead=table.querySelector("thead tr");
+const tbody=table.querySelector("tbody");
+const counterDiv=document.getElementById("counter");
 
-  // Añadir días al encabezado
-  dias.forEach(dia=>{ const th=document.createElement("th"); th.textContent=dia; thead.appendChild(th); });
+// Añadir días al encabezado
+dias.forEach(dia=>{ const th=document.createElement("th"); th.textContent=dia; thead.appendChild(th); });
 
-  let showOnlyFree=false;
+let showOnlyFree=false;
 
-  function actualizarContador(){
-    let total=0;
-    tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
-    counterDiv.textContent="Clientes agendados: "+total;
-  }
+// Función para actualizar contador
+function actualizarContador(){
+  let total=0;
+  tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
+  counterDiv.textContent="Clientes agendados: "+total;
+}
 
-  // Crear filas por hora
-  horas.forEach(hora=>{
-    const tr=document.createElement("tr");
-    const thHora=document.createElement("th");
-    thHora.textContent=hora;
-    tr.appendChild(thHora);
-
-    dias.forEach(dia=>{
-      const td=document.createElement("td"); td.className="slot";
-      const key=dia+"_"+hora;
-
-      // Escuchar cambios en Firebase
-      db.ref("citas/"+key).on("value", snap=>{
-        const val = snap.val()||"";
-        td.textContent = val;
-        td.classList.toggle("libre", val==="");
-        td.classList.toggle("ocupado", val!=="");
-        td.style.display=(showOnlyFree && val!=="")?"none":"table-cell";
-        actualizarContador();
-      });
-
-      // Editar slot al hacer clic
-      td.onclick=()=>{
-        const input=document.createElement("input");
-        input.value=td.textContent;
-        td.textContent="";
-        td.appendChild(input);
-        input.focus();
-
-        input.onblur=()=>{
-          const val=input.value.trim();
-          db.ref("citas/"+key).set(val);
-          td.removeChild(input);
-        };
-        input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
-      };
-
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
+// Función para aplicar filtro correctamente
+function aplicarFiltro(){
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    if(showOnlyFree){
+      td.style.display = (td.textContent.trim()==="") ? "table-cell" : "none";
+    } else {
+      td.style.display = "table-cell";
+    }
   });
+}
 
-  // Botones filtro
-  document.getElementById("showAll").onclick=()=>{
-    showOnlyFree=false;
-    tbody.querySelectorAll("td.slot").forEach(td=>td.style.display="table-cell");
-  };
-  document.getElementById("showFree").onclick=()=>{
-    showOnlyFree=true;
-    tbody.querySelectorAll("td.slot").forEach(td=>{
-      td.style.display=(td.textContent.trim()==="")?"table-cell":"none";
+// Crear filas por hora
+horas.forEach(hora=>{
+  const tr=document.createElement("tr");
+  const thHora=document.createElement("th");
+  thHora.textContent=hora;
+  tr.appendChild(thHora);
+
+  dias.forEach(dia=>{
+    const td=document.createElement("td"); td.className="slot";
+    const key=dia+"_"+hora;
+
+    // Escuchar cambios en Firebase
+    db.ref("citas/"+key).on("value", snap=>{
+      const val = snap.val()||"";
+      td.textContent = val;
+      td.classList.toggle("libre", val==="");
+      td.classList.toggle("ocupado", val!=="");
+      aplicarFiltro(); // Aplicar filtro siempre que cambie un slot
+      actualizarContador();
     });
-  };
+
+    // Editar slot al hacer clic
+    td.onclick=()=>{
+      const input=document.createElement("input");
+      input.value=td.textContent;
+      td.textContent="";
+      td.appendChild(input);
+      input.focus();
+
+      input.onblur=()=>{
+        const val=input.value.trim();
+        db.ref("citas/"+key).set(val);
+        td.removeChild(input);
+      };
+      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
+    };
+
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+});
+
+// Botones filtro
+document.getElementById("showAll").onclick=()=>{
+  showOnlyFree=false;
+  aplicarFiltro();
+};
+document.getElementById("showFree").onclick=()=>{
+  showOnlyFree=true;
+  aplicarFiltro();
+};
 </script>
 </body>
 </html>
