@@ -38,6 +38,13 @@ td.libre:hover input { background:#a5d6a7; }
 td.ocupado:hover input { background:#ef6c6c; }         
 td.ocupado-filtro:hover input { background:#999999; }  
 
+/* Fondo suave para cada día */
+thead th.dia {
+  background: #bbdefb; /* azul claro */
+  color: #0d47a1;
+  font-weight: bold;
+}
+
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; white-space: nowrap; }
   th, td { padding: 0 5px; font-size: 14px; min-width: 60px; height:30px; }
@@ -143,8 +150,19 @@ function actualizarHeader(){
   fechas.forEach(fechaStr=>{
     const th=document.createElement("th");
     th.textContent = fechaStr;
+    th.classList.add("dia"); // aplica fondo azul claro
     thead.appendChild(th);
   });
+
+  // Mostrar rango completo de la semana en el label
+  const firstDay = new Date(currentMonday);
+  const lastDay = new Date(currentMonday);
+  lastDay.setDate(lastDay.getDate() + 6);
+  const formatDate = d => `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`;
+  weekLabel.textContent = `Semana: ${formatDate(firstDay)} - ${formatDate(lastDay)}`;
+  weekLabel.style.fontWeight = "bold";
+  weekLabel.style.color = "#1976d2";
+  weekLabel.style.fontSize = "16px";
 }
 
 function actualizarContador(){
@@ -240,8 +258,6 @@ function cargarSemana(){
 
       actualizarEstado(td);
     });
-
-    weekLabel.textContent = `Semana del ${currentMonday.getDate()}/${currentMonday.getMonth()+1}`;
   });
 }
 
