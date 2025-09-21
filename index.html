@@ -43,7 +43,8 @@ input[type=email], input[type=password] { padding:6px; margin:4px; border-radius
   <input type="email" id="email" placeholder="Email"><br>
   <input type="password" id="password" placeholder="Contraseña"><br>
   <button id="loginBtn">Login</button>
-  <button id="registerBtn">Registrarse</button>
+  <button id="registerBtn">Registrarse</button><br><br>
+  <button id="googleLoginBtn">Iniciar sesión con Google</button>
   <div id="authMessage"></div>
 </div>
 
@@ -165,7 +166,6 @@ function aplicarFiltro(){
       td.classList.add("ocupado-filtro");
       if(input) input.disabled = true;
     } else if(input){
-      // solo permitir editar si hay usuario logueado
       input.disabled = !currentUser;
     }
   });
@@ -243,6 +243,7 @@ document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFi
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
+
 document.getElementById("loginBtn").onclick = ()=>{
   const email = document.getElementById("email").value;
   const pass = document.getElementById("password").value;
@@ -257,6 +258,7 @@ document.getElementById("loginBtn").onclick = ()=>{
     })
     .catch(err=>{ document.getElementById("authMessage").textContent = err.message; });
 };
+
 document.getElementById("registerBtn").onclick = ()=>{
   const email = document.getElementById("email").value;
   const pass = document.getElementById("password").value;
@@ -271,6 +273,24 @@ document.getElementById("registerBtn").onclick = ()=>{
     })
     .catch(err=>{ document.getElementById("authMessage").textContent = err.message; });
 };
+
+// Google Sign-In
+document.getElementById("googleLoginBtn").onclick = ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(result=>{
+      currentUser = result.user;
+      document.getElementById("authContainer").style.display="none";
+      document.querySelector(".week-nav").style.display="flex";
+      document.querySelector(".controls").style.display="flex";
+      document.getElementById("calendar").style.display="table";
+      cargarSemana();
+    })
+    .catch(err=>{
+      document.getElementById("authMessage").textContent = err.message;
+    });
+};
+
 document.getElementById("logoutBtn").onclick = ()=>{
   auth.signOut().then(()=>{
     currentUser=null;
@@ -281,7 +301,7 @@ document.getElementById("logoutBtn").onclick = ()=>{
   });
 };
 
-// Mantener sesión activa y actualizar estado actual
+// Mantener sesión activa
 auth.onAuthStateChanged(user=>{
   if(user){
     currentUser = user;
