@@ -12,17 +12,20 @@ button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
 
 table { width:100%; border-collapse: collapse; margin-top:10px; text-align:center; }
-th, td { border:1px solid #ccc; padding:0; height:35px; }
+th, td { border:1px solid #ccc; padding:0; height:35px; vertical-align:top; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
-td.slot input { width: 100%; height: 100%; border:none; padding:5px; box-sizing:border-box; text-align:center; font-size:14px; background:transparent; }
+td.slot input { width: 100%; height: 100%; border:none; padding:2px; box-sizing:border-box; text-align:center; font-size:14px; background:transparent; }
+
 td.libre input { background:#c8e6c9; cursor:text; }
 td.ocupado input { background:#ef9a9a; cursor:text; }
 td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; }
 td.pasado input { background:#e0e0e0; cursor:not-allowed; }
+
 td.libre:hover input { background:#a5d6a7; }
 td.ocupado:hover input { background:#ef6c6c; }
 td.ocupado-filtro:hover input { background:#999999; }
+
 thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
 
 .week-nav { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
@@ -95,6 +98,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+const adminUID = "TU_UID_DE_FIREBASE"; // reemplaza con tu UID real
 let userLoggedIn = false;
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
@@ -180,7 +184,7 @@ function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
     const input = td.querySelector("input");
-    if(td.classList.contains("pasado")){
+    if(td.classList.contains("pasado") || !userLoggedIn){
       if(input) input.disabled = true;
       return;
     }
@@ -188,7 +192,7 @@ function aplicarFiltro(){
       td.classList.add("ocupado-filtro");
       if(input) input.disabled = true;
     } else if(input){
-      input.disabled = !userLoggedIn ? true : false;
+      input.disabled = td.dataset.uid && td.dataset.uid!==auth.currentUser.uid ? true : false;
     }
   });
 }
@@ -218,6 +222,7 @@ function cargarSemana(){
   crearTabla();
   actualizarHeader();
   db.ref("citas").off();
+
   db.ref("citas").once("value").then(snap=>{
     const data = snap.val() || {};
     tbody.querySelectorAll("td.slot").forEach(td=>{
@@ -225,40 +230,49 @@ function cargarSemana(){
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
       const fechaStr = slotDate.toISOString().split('T')[0];
       const key = `${fechaStr}_${td.dataset.hora}`;
-      const valObj = data[key] || {cliente:""};
+      const valObj = data[key] || {cliente:"", uid:""};
+
       if(!td.querySelector("input")){
         const input = document.createElement("input");
         input.value = valObj.cliente || "";
         td.dataset.uid = valObj.uid || "";
-        td.dataset.nombre = valObj.nombre || "";
         td.appendChild(input);
 
-        input.onblur = ()=>{
+        const actualizarCita = ()=>{
           if(!userLoggedIn) return;
           const user = auth.currentUser;
           db.ref("citas/"+key).set({
             cliente: input.value.trim(),
-            uid: user.uid,
-            nombre: user.displayName
+            uid: user.uid
           });
+          td.dataset.uid = user.uid;
           actualizarEstado(td);
         };
+
+        input.onblur = actualizarCita;
         input.onkeydown = e=>{
           if(e.key==="Enter"){
-            if(!userLoggedIn) return;
-            const user = auth.currentUser;
-            db.ref("citas/"+key).set({
-              cliente: input.value.trim(),
-              uid: user.uid,
-              nombre: user.displayName
-            });
-            actualizarEstado(td);
+            actualizarCita();
             input.blur();
           }
         };
       } else {
-        td.querySelector("input").value = valObj.cliente || "";
+        const input = td.querySelector("input");
+        input.value = valObj.cliente || "";
+        td.dataset.uid = valObj.uid || "";
       }
+
+      // Bloquear slot si pertenece a otro usuario
+      const input = td.querySelector("input");
+      if(valObj.uid && userLoggedIn && auth.currentUser.uid !== valObj.uid){
+        input.disabled = true;
+        td.classList.add("ocupado-filtro");
+      } else if(userLoggedIn){
+        input.disabled = false;
+      } else {
+        input.disabled = true; // nadie logueado no puede escribir
+      }
+
       actualizarEstado(td);
     });
   });
@@ -270,16 +284,17 @@ document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFi
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-// Login y logout
+// Login y Logout
 loginBtn.onclick = ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(error=>{
-    alert("Error al iniciar sesión: " + error.message);
+    alert("Error al iniciar sesión: "+error.message);
   });
 };
+
 logoutBtn.onclick = ()=>{
   auth.signOut().catch(error=>{
-    alert("Error al cerrar sesión: " + error.message);
+    alert("Error al cerrar sesión: "+error.message);
   });
 };
 
@@ -289,7 +304,9 @@ auth.onAuthStateChanged(user=>{
   document.getElementById("loginScreen").style.display = userLoggedIn ? "none" : "flex";
   document.getElementById("calendarScreen").style.display = userLoggedIn ? "block" : "none";
   logoutBtn.style.display = userLoggedIn ? "inline-block" : "none";
-  cargarSemana();
+  if(userLoggedIn){
+    cargarSemana(); // cargar tabla solo después de loguear
+  }
 });
 </script>
 </body>
