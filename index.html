@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agenda Barbería Pro</title>
+<title>Agenda Barbería Pro - Multi Semana</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
 h1 { text-align:center; color:#222; }
-.controls { display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; flex-wrap:wrap; gap:10px; }
+.controls, .week-nav { display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; flex-wrap:wrap; gap:10px; }
 button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; }
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
@@ -18,12 +18,20 @@ td.slot { min-width:80px; cursor:pointer; position:relative; }
 td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
 td.libre { background:#c8e6c9; }        /* verde */
 td.ocupado { background:#ef9a9a; }      /* rojo */
-td.ocupado.filtro { background:#cccccc; } /* gris cuando se filtra */
+td.ocupado.filtro { background:#cccccc; cursor: not-allowed; } /* gris cuando se filtra */
+td.pasado { background:#e0e0e0; cursor: not-allowed; } /* gris para días pasados */
 </style>
 </head>
 <body>
 
-<h1>Agenda Barbería Pro</h1>
+<h1>Agenda Barbería Pro - Multi Semana</h1>
+
+<div class="week-nav">
+  <button id="prevWeek">← Semana anterior</button>
+  <span id="weekLabel">Semana</span>
+  <button id="nextWeek">Semana siguiente →</button>
+</div>
+
 <div class="controls">
   <button id="showAll">Mostrar todas las citas</button>
   <button id="showFree">Mostrar solo libres</button>
@@ -62,11 +70,14 @@ const table=document.getElementById("calendar");
 const thead=table.querySelector("thead tr");
 const tbody=table.querySelector("tbody");
 const counterDiv=document.getElementById("counter");
+const weekLabel = document.getElementById("weekLabel");
+
+let showOnlyFree=false;
+let semanaActual = getWeekId(new Date());
+weekLabel.textContent = semanaActual;
 
 // Añadir días al encabezado
 dias.forEach(dia=>{ const th=document.createElement("th"); th.textContent=dia; thead.appendChild(th); });
-
-let showOnlyFree=false;
 
 // Función para actualizar contador
 function actualizarContador(){
@@ -80,63 +91,116 @@ function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("filtro");
     if(showOnlyFree && td.classList.contains("ocupado")){
-      td.classList.add("filtro"); // poner gris en ocupados
+      td.classList.add("filtro"); // gris
     }
   });
 }
 
-// Crear filas por hora
-horas.forEach(hora=>{
-  const tr=document.createElement("tr");
-  const thHora=document.createElement("th");
-  thHora.textContent=hora;
-  tr.appendChild(thHora);
+// Función para calcular ID de semana YYYY-Www
+function getWeekId(date){
+  const oneJan = new Date(date.getFullYear(),0,1);
+  const numberOfDays = Math.floor((date - oneJan) / (24*60*60*1000));
+  const week = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+  return date.getFullYear() + "-W" + week;
+}
 
-  dias.forEach(dia=>{
-    const td=document.createElement("td"); td.className="slot";
-    const key=dia+"_"+hora;
+// Función para cambiar semanas
+function changeWeek(offset){
+  const d = parseWeekId(semanaActual);
+  d.setDate(d.getDate() + offset*7);
+  semanaActual = getWeekId(d);
+  weekLabel.textContent = semanaActual;
+  cargarSemana();
+}
 
-    // Escuchar cambios en Firebase
-    db.ref("citas/"+key).on("value", snap=>{
-      const val = snap.val()||"";
-      td.textContent = val;
-      td.classList.remove("libre","ocupado");
-      if(val==="") td.classList.add("libre");
-      else td.classList.add("ocupado");
-      aplicarFiltro();
-      actualizarContador();
+// Parse YYYY-Www a Date (primer día de la semana)
+function parseWeekId(weekId){
+  const [year, w] = weekId.split("-W");
+  const d = new Date(year,0,1);
+  const week = parseInt(w,10);
+  d.setDate(d.getDate() + (week-1)*7);
+  return d;
+}
+
+// Obtener fecha completa del slot
+function getSlotDate(dia, semanaId){
+  const d = parseWeekId(semanaId); // primer día de la semana
+  const diaIndex = dias.indexOf(dia); // 0=Lunes
+  d.setDate(d.getDate() + diaIndex);
+  return d;
+}
+
+// Crear filas por hora y dias
+function crearTabla(){
+  tbody.innerHTML = "";
+  horas.forEach(hora=>{
+    const tr=document.createElement("tr");
+    const thHora=document.createElement("th");
+    thHora.textContent=hora;
+    tr.appendChild(thHora);
+
+    dias.forEach(dia=>{
+      const td=document.createElement("td"); td.className="slot";
+      tr.appendChild(td);
     });
-
-    // Editar slot al hacer clic
-    td.onclick=()=>{
-      const input=document.createElement("input");
-      input.value=td.textContent;
-      td.textContent="";
-      td.appendChild(input);
-      input.focus();
-
-      input.onblur=()=>{
-        const val=input.value.trim();
-        db.ref("citas/"+key).set(val);
-        td.removeChild(input);
-      };
-      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
-    };
-
-    tr.appendChild(td);
+    tbody.appendChild(tr);
   });
-  tbody.appendChild(tr);
-});
+}
+
+// Cargar datos de Firebase según semanaActual
+function cargarSemana(){
+  crearTabla();
+  tbody.querySelectorAll("tr").forEach((tr, rowIndex)=>{
+    const hora = horas[rowIndex];
+    dias.forEach((dia, colIndex)=>{
+      const td = tr.children[colIndex+1]; // +1 porque primera columna es hora
+      const key = dia + "_" + hora;
+      const slotDate = getSlotDate(dia, semanaActual);
+      const now = new Date(); now.setHours(0,0,0,0);
+
+      db.ref("citas/"+semanaActual+"/"+key).on("value", snap=>{
+        const val = snap.val()||"";
+        td.textContent = val;
+        td.classList.remove("libre","ocupado","pasado");
+        if(val==="") td.classList.add("libre");
+        else td.classList.add("ocupado");
+        if(slotDate < now) td.classList.add("pasado"); // día pasado
+        aplicarFiltro();
+        actualizarContador();
+      });
+
+      td.onclick = () => {
+        // Bloquear días pasados o grises
+        if(td.classList.contains("pasado")) return;
+        if(td.classList.contains("ocupado") && showOnlyFree) return;
+
+        const input = document.createElement("input");
+        input.value = td.textContent;
+        td.textContent = "";
+        td.appendChild(input);
+        input.focus();
+
+        input.onblur = () => {
+          const val = input.value.trim();
+          db.ref("citas/"+semanaActual+"/"+key).set(val);
+          td.removeChild(input);
+        };
+        input.onkeydown = (e) => { if(e.key==="Enter") input.blur(); };
+      };
+    });
+  });
+}
 
 // Botones filtro
-document.getElementById("showAll").onclick=()=>{
-  showOnlyFree=false;
-  aplicarFiltro();
-};
-document.getElementById("showFree").onclick=()=>{
-  showOnlyFree=true;
-  aplicarFiltro();
-};
+document.getElementById("showAll").onclick = () => { showOnlyFree=false; aplicarFiltro(); };
+document.getElementById("showFree").onclick = () => { showOnlyFree=true; aplicarFiltro(); };
+
+// Botones semana
+document.getElementById("prevWeek").onclick = () => changeWeek(-1);
+document.getElementById("nextWeek").onclick = () => changeWeek(1);
+
+// Inicializar
+cargarSemana();
 </script>
 </body>
 </html>
