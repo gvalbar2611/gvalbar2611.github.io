@@ -11,13 +11,11 @@ h1 { text-align:center; color:#222; }
 button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; }
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
-#loginBtn { margin-bottom:10px; }
 table { width:100%; border-collapse: collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:0; text-align:center; height:35px; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
 
-/* Input ocupa toda la celda */
 td.slot input {
   width: 100%;
   height: 100%;
@@ -29,7 +27,6 @@ td.slot input {
   background: transparent;
 }
 
-/* Estados de las celdas */
 td.libre input { background:#c8e6c9; cursor:text; }           
 td.ocupado input { background:#ef9a9a; cursor:text; }        
 td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; } 
@@ -39,7 +36,6 @@ td.libre:hover input { background:#a5d6a7; }
 td.ocupado:hover input { background:#ef6c6c; }         
 td.ocupado-filtro:hover input { background:#999999; }  
 
-/* Fondo suave para cada día */
 thead th.dia {
   background: #bbdefb; /* azul claro */
   color: #0d47a1;
@@ -58,8 +54,6 @@ thead th.dia {
 
 <h1>Citas Gavabarber</h1>
 
-<button id="loginBtn">Iniciar sesión con Google</button>
-
 <div class="week-nav">
   <button id="prevWeek">← Semana anterior</button>
   <span id="weekLabel">Semana actual</span>
@@ -69,6 +63,7 @@ thead th.dia {
 <div class="controls">
   <button id="showAll">Mostrar todas las citas</button>
   <button id="showFree">Mostrar solo libres</button>
+  <button id="loginBtn">Iniciar sesión con Google</button>
   <div id="counter">Clientes agendados: 0</div>
 </div>
 
@@ -94,8 +89,10 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.database();
+const auth = firebase.auth();
+
+let userLoggedIn = false;
 
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
@@ -110,7 +107,6 @@ const loginBtn = document.getElementById("loginBtn");
 
 let showOnlyFree=false;
 let currentMonday = getMonday(new Date());
-let userLoggedIn = false;
 
 function getMonday(d){
   const date = new Date(d);
@@ -182,18 +178,16 @@ function actualizarContador(){
 function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
-
     const input = td.querySelector("input");
     if(td.classList.contains("pasado")){
       if(input) input.disabled = true;
       return;
     }
-
     if(showOnlyFree && td.classList.contains("ocupado")){
       td.classList.add("ocupado-filtro");
       if(input) input.disabled = true;
     } else if(input){
-      input.disabled = !userLoggedIn; // solo habilitado si está logueado
+      input.disabled = !userLoggedIn ? true : false;
     }
   });
 }
@@ -216,6 +210,7 @@ function actualizarEstado(td){
     if(input) input.disabled = true;
   } else if(val===""){
     td.classList.add("libre");
+    if(input && !userLoggedIn) input.disabled = true;
   } else {
     td.classList.add("ocupado");
   }
@@ -235,29 +230,42 @@ function cargarSemana(){
     tbody.querySelectorAll("td.slot").forEach(td=>{
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const fechaStr = slotDate.toISOString().split('T')[0];
+      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
       const key = `${fechaStr}_${td.dataset.hora}`;
       const val = data[key] || "";
 
       if(!td.querySelector("input")){
         const input = document.createElement("input");
-        input.value = val;
+        input.value = val.cliente || val;
         td.appendChild(input);
 
         input.onblur = ()=>{ 
-          if(userLoggedIn) db.ref("citas/"+key).set(input.value.trim());
+          if(userLoggedIn) {
+            db.ref("citas/"+key).set({
+              cliente: input.value.trim(),
+              uid: auth.currentUser.uid,
+              nombre: auth.currentUser.displayName
+            });
+          }
           actualizarEstado(td);
         };
+        
         input.onkeydown = e=>{
           if(e.key==="Enter"){
-            if(userLoggedIn) db.ref("citas/"+key).set(input.value.trim());
+            if(userLoggedIn) {
+              db.ref("citas/"+key).set({
+                cliente: input.value.trim(),
+                uid: auth.currentUser.uid,
+                nombre: auth.currentUser.displayName
+              });
+            }
             actualizarEstado(td);
             input.blur();
           }
         };
       } else {
-        td.querySelector("input").value = val;
+        input.value = val.cliente || val;
       }
 
       actualizarEstado(td);
@@ -285,11 +293,13 @@ loginBtn.onclick = ()=>{
   });
 };
 
-// Detectar logout
+// Detectar logout / estado
 auth.onAuthStateChanged(user=>{
   userLoggedIn = !!user;
   if(!user){
     loginBtn.textContent = "Iniciar sesión con Google";
+  } else {
+    loginBtn.textContent = "Logueado: " + user.displayName;
   }
   cargarSemana();
 });
