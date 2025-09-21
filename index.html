@@ -1,127 +1,128 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agenda de Citas - Barbería</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #222;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 5px;
-      text-align: center;
-    }
-    th {
-      background: #2196f3;
-      color: white;
-    }
-    td.slot {
-      min-width: 80px;
-      position: relative;
-      cursor: pointer;
-    }
-    td input {
-      width: 100%;
-      border: none;
-      padding: 5px;
-      box-sizing: border-box;
-      text-align: center;
-      background: transparent;
-    }
-    td.libre {
-      background: #c8e6c9; /* verde */
-    }
-    td.ocupado {
-      background: #ef9a9a; /* rojo */
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Barbería Pro</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+h1 { text-align:center; color:#222; }
+.controls { display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; flex-wrap:wrap; gap:10px; }
+button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; }
+button:hover { background:#1976d2; }
+#counter { font-weight:bold; }
+table { width:100%; border-collapse: collapse; margin-top:10px; }
+th, td { border:1px solid #ccc; padding:5px; text-align:center; }
+th { background:#2196f3; color:white; }
+td.slot { min-width:80px; cursor:pointer; position:relative; }
+td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
+td.libre { background:#c8e6c9; }
+td.ocupado { background:#ef9a9a; }
+</style>
 </head>
 <body>
-  <h1>Agenda de Citas - Gavabarber</h1>
-  <table id="calendar">
-    <thead>
-      <tr>
-        <th>Hora</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
 
-  <script>
-    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const horas = [];
-    for (let h = 9; h <= 20; h++) {
-      horas.push(h + ":00");
-      horas.push(h + ":30");
-    }
+<h1>Agenda Barbería Pro</h1>
+<div class="controls">
+  <button id="showAll">Mostrar todas las citas</button>
+  <button id="showFree">Mostrar solo libres</button>
+  <div id="counter">Clientes agendados: 0</div>
+</div>
 
-    const table = document.getElementById("calendar");
-    const thead = table.querySelector("thead tr");
-    const tbody = table.querySelector("tbody");
+<table id="calendar">
+<thead><tr><th>Hora</th></tr></thead>
+<tbody></tbody>
+</table>
 
-    // Añadir los días como columnas
-    dias.forEach(dia => {
-      const th = document.createElement("th");
-      th.textContent = dia;
-      thead.appendChild(th);
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "XXXXX",
+  appId: "XXXXX"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const horas=[];
+for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
+
+const table=document.getElementById("calendar");
+const thead=table.querySelector("thead tr");
+const tbody=table.querySelector("tbody");
+const counterDiv=document.getElementById("counter");
+
+// Agregar días al encabezado
+dias.forEach(dia=>{ const th=document.createElement("th"); th.textContent=dia; thead.appendChild(th); });
+
+let showOnlyFree=false;
+
+// Función para actualizar contador
+function actualizarContador(){
+  let total=0;
+  tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
+  counterDiv.textContent="Clientes agendados: "+total;
+}
+
+// Crear filas por hora
+horas.forEach(hora=>{
+  const tr=document.createElement("tr");
+  const thHora=document.createElement("th");
+  thHora.textContent=hora;
+  tr.appendChild(thHora);
+
+  dias.forEach(dia=>{
+    const td=document.createElement("td"); td.className="slot";
+    const key=dia+"_"+hora;
+
+    // Escuchar cambios en Firebase
+    db.ref("citas/"+key).on("value", snap=>{
+      const val=snap.val()||"";
+      td.textContent=val;
+      td.classList.toggle("libre", val==="");
+      td.classList.toggle("ocupado", val!=="");
+      td.style.display=(showOnlyFree && val!=="")?"none":"table-cell";
+      actualizarContador();
     });
 
-    // Crear filas por hora
-    horas.forEach(hora => {
-      const tr = document.createElement("tr");
-      const thHora = document.createElement("th");
-      thHora.textContent = hora;
-      tr.appendChild(thHora);
+    td.onclick=()=>{
+      const input=document.createElement("input");
+      input.value=td.textContent;
+      td.textContent="";
+      td.appendChild(input);
+      input.focus();
 
-      dias.forEach(dia => {
-        const td = document.createElement("td");
-        td.className = "slot";
+      input.onblur=()=>{
+        const val=input.value.trim();
+        db.ref("citas/"+key).set(val);
+        td.removeChild(input);
+      };
+      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
+    };
 
-        const key = dia + "_" + hora;
-        const saved = localStorage.getItem(key) || "";
-        td.textContent = saved;
-        td.classList.add(saved.trim() === "" ? "libre" : "ocupado");
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+});
 
-        // Hacer editable al hacer click
-        td.onclick = () => {
-          const input = document.createElement("input");
-          input.value = td.textContent;
-          td.textContent = "";
-          td.appendChild(input);
-          input.focus();
-
-          input.onblur = () => {
-            const val = input.value.trim();
-            localStorage.setItem(key, val);
-            td.removeChild(input);
-            td.textContent = val;
-            td.classList.toggle("libre", val === "");
-            td.classList.toggle("ocupado", val !== "");
-          };
-
-          input.onkeydown = (e) => {
-            if (e.key === "Enter") input.blur();
-          };
-        };
-
-        tr.appendChild(td);
-      });
-
-      tbody.appendChild(tr);
-    });
-  </script>
+// Botones filtro
+document.getElementById("showAll").onclick=()=>{
+  showOnlyFree=false;
+  tbody.querySelectorAll("td.slot").forEach(td=>td.style.display="table-cell");
+};
+document.getElementById("showFree").onclick=()=>{
+  showOnlyFree=true;
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    td.style.display=(td.textContent.trim()==="")?"table-cell":"none";
+  });
+};
+</script>
 </body>
 </html>
