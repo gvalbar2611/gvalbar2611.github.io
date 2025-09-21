@@ -14,6 +14,24 @@
       text-align: center;
       color: #222;
     }
+    .dias {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .dias button {
+      padding: 10px 15px;
+      border: none;
+      background: #2196f3;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .dias button:hover {
+      background: #1976d2;
+    }
     .slot {
       display: flex;
       justify-content: space-between;
@@ -35,7 +53,7 @@
       border: 1px solid #ccc;
       border-radius: 6px;
     }
-    button {
+    button.save {
       margin-left: 10px;
       padding: 5px 10px;
       border: none;
@@ -44,50 +62,66 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
+    button.save:hover {
       background: #45a049;
     }
   </style>
 </head>
 <body>
   <h1>Agenda de Citas</h1>
+
+  <div class="dias" id="dias"></div>
   <div id="agenda"></div>
 
   <script>
+    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const agendaDiv = document.getElementById("agenda");
-    const horas = [];
-    for (let h = 9; h <= 20; h++) { // De 9:00 a 20:00
-      horas.push(h + ":00");
-      horas.push(h + ":30");
-    }
+    const diasDiv = document.getElementById("dias");
 
-    // Crear slots
-    horas.forEach(hora => {
-      const slot = document.createElement("div");
-      slot.className = "slot";
-
-      const label = document.createElement("span");
-      label.textContent = hora;
-
-      const input = document.createElement("input");
-      input.placeholder = "Nombre cliente";
-
-      // Cargar datos guardados
-      const saved = localStorage.getItem(hora);
-      if (saved) input.value = saved;
-
+    // Mostrar botones de días
+    dias.forEach(dia => {
       const btn = document.createElement("button");
-      btn.textContent = "Guardar";
-      btn.onclick = () => {
-        localStorage.setItem(hora, input.value);
-        alert("Cita guardada para " + hora);
-      };
-
-      slot.appendChild(label);
-      slot.appendChild(input);
-      slot.appendChild(btn);
-      agendaDiv.appendChild(slot);
+      btn.textContent = dia;
+      btn.onclick = () => mostrarHoras(dia);
+      diasDiv.appendChild(btn);
     });
+
+    function mostrarHoras(dia) {
+      agendaDiv.innerHTML = ""; // Limpiar agenda
+      const horas = [];
+      for (let h = 9; h <= 20; h++) { // De 9:00 a 20:00
+        horas.push(h + ":00");
+        horas.push(h + ":30");
+      }
+
+      horas.forEach(hora => {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+
+        const label = document.createElement("span");
+        label.textContent = hora;
+
+        const input = document.createElement("input");
+        input.placeholder = "Nombre cliente";
+
+        // Cargar datos guardados
+        const saved = localStorage.getItem(dia + "_" + hora);
+        if (saved) input.value = saved;
+
+        const btn = document.createElement("button");
+        btn.textContent = "Guardar";
+        btn.className = "save";
+        btn.onclick = () => {
+          localStorage.setItem(dia + "_" + hora, input.value);
+          alert("Cita guardada para " + dia + " a las " + hora);
+        };
+
+        slot.appendChild(label);
+        slot.appendChild(input);
+        slot.appendChild(btn);
+        agendaDiv.appendChild(slot);
+      });
+    }
   </script>
 </body>
 </html>
