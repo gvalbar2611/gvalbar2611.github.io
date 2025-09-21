@@ -187,23 +187,28 @@ function aplicarFiltro(){
       if(input) input.disabled = true;
       return;
     }
+    // Bloqueo si el slot tiene uid distinto
+    if(td.dataset.uid && userLoggedIn && auth.currentUser.uid !== td.dataset.uid){
+      input.disabled = true;
+      td.classList.add("ocupado-filtro");
+    } else {
+      input.disabled = false;
+    }
     if(showOnlyFree && td.classList.contains("ocupado")){
       td.classList.add("ocupado-filtro");
-      if(input) input.disabled = true;
-    } else if(input){
-      input.disabled = td.dataset.uid && td.dataset.uid!==auth.currentUser.uid ? true : false;
+      input.disabled = true;
     }
   });
 }
 
 function actualizarEstado(td){
+  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
   const input = td.querySelector("input");
   const val = input.value.trim();
   const slotDate = new Date(currentMonday);
   slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
   const [hour, min] = td.dataset.hora.split(":").map(Number);
   slotDate.setHours(hour, min, 0, 0);
-  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
   const now = new Date();
   if(slotDate < now){
     td.classList.add("pasado");
@@ -242,17 +247,13 @@ function cargarSemana(){
           const user = auth.currentUser;
           const nuevoValor = input.value.trim();
 
-          if(nuevoValor === "") {
+          if(nuevoValor === ""){
             db.ref("citas/"+key).remove();
             td.dataset.uid = "";
           } else {
-            db.ref("citas/"+key).set({
-              cliente: nuevoValor,
-              uid: user.uid
-            });
+            db.ref("citas/"+key).set({cliente:nuevoValor, uid:user.uid});
             td.dataset.uid = user.uid;
           }
-
           actualizarEstado(td);
         };
 
@@ -269,7 +270,6 @@ function cargarSemana(){
         td.dataset.uid = valObj.uid || "";
       }
 
-      // Bloquear slot si pertenece a otro usuario
       const input = td.querySelector("input");
       if(valObj.uid && userLoggedIn && auth.currentUser.uid !== valObj.uid){
         input.disabled = true;
