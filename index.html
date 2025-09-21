@@ -17,15 +17,15 @@ th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
 
 /* Estados de las celdas */
-td.libre { background:#c8e6c9; cursor:text; }           /* verde editable */
-td.ocupado { background:#ef9a9a; cursor:text; }        /* rojo editable */
-td.ocupado-filtro { background:#b0b0b0; cursor:text; } /* gris oscuro filtrado editable */
-td.pasado { background:#e0e0e0; cursor:not-allowed; }  /* gris clarito no editable */
+td.libre { background:#c8e6c9; cursor:text; }           
+td.ocupado { background:#ef9a9a; cursor:text; }        
+td.ocupado-filtro { background:#b0b0b0; cursor:text; } 
+td.pasado { background:#e0e0e0; cursor:not-allowed; }  
 
 /* Hover para destacar editable */
-td.libre:hover { background:#a5d6a7; }           /* verde más intenso */
-td.ocupado:hover { background:#ef6c6c; }         /* rojo más intenso */
-td.ocupado-filtro:hover { background:#999999; }  /* gris oscuro más intenso */
+td.libre:hover { background:#a5d6a7; }           
+td.ocupado:hover { background:#ef6c6c; }         
+td.ocupado-filtro:hover { background:#999999; }  
 
 /* Responsive para móviles */
 @media (max-width: 768px) {
@@ -62,19 +62,19 @@ td.ocupado-filtro:hover { background:#999999; }  /* gris oscuro más intenso */
 
 <script>
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
-  projectId: "TU_PROYECTO",
-  storageBucket: "TU_PROYECTO.appspot.com",
-  messagingSenderId: "XXXXX",
-  appId: "XXXXX"
+  apiKey: "AIzaSyAjXrpMMKPMc9KsrpZ_ymv8CMAKME8l0Fs",
+  authDomain: "agenda-barberia-59b4c.firebaseapp.com",
+  databaseURL: "https://agenda-barberia-59b4c-default-rtdb.firebaseio.com",
+  projectId: "agenda-barberia-59b4c",
+  storageBucket: "agenda-barberia-59b4c.firebasestorage.app",
+  messagingSenderId: "541388928781",
+  appId: "1:541388928781:web:89db455c12f67b3fee6244",
+  measurementId: "G-LG0DL5RXP0"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Domingo incluido
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
 for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
@@ -86,20 +86,17 @@ const counterDiv=document.getElementById("counter");
 const weekLabel = document.getElementById("weekLabel");
 
 let showOnlyFree=false;
-
-// Fecha del lunes actual
 let currentMonday = getMonday(new Date());
 
 function getMonday(d){
   const date = new Date(d);
   const day = date.getDay();
-  const diff = (day === 0 ? -6 : 1) - day; // si es domingo, -6
+  const diff = (day === 0 ? -6 : 1) - day;
   date.setDate(date.getDate() + diff);
   date.setHours(0,0,0,0);
   return date;
 }
 
-// Crear filas por hora y días
 function crearTabla(){
   tbody.innerHTML = "";
   horas.forEach(hora=>{
@@ -107,12 +104,15 @@ function crearTabla(){
     const thHora=document.createElement("th");
     thHora.textContent=hora;
     tr.appendChild(thHora);
-    dias.forEach(_=>{ const td=document.createElement("td"); td.className="slot"; tr.appendChild(td); });
+    dias.forEach(_=>{
+      const td=document.createElement("td");
+      td.className="slot";
+      tr.appendChild(td);
+    });
     tbody.appendChild(tr);
   });
 }
 
-// Obtener array de fechas para encabezado
 function getWeekDates(monday){
   return dias.map((dia,index)=>{
     const d = new Date(monday);
@@ -123,7 +123,6 @@ function getWeekDates(monday){
   });
 }
 
-// Actualizar encabezado con fechas
 function actualizarHeader(){
   thead.querySelectorAll("th:not(:first-child)").forEach(th=>th.remove());
   const fechas = getWeekDates(currentMonday);
@@ -134,21 +133,20 @@ function actualizarHeader(){
   });
 }
 
-// Actualizar contador
 function actualizarContador(){
   let total=0;
-  tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    if(td.textContent.trim()!=="") total++;
+  });
   counterDiv.textContent="Clientes agendados: "+total;
 }
 
-// Aplicar filtro de solo libres
 function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
     if(td.classList.contains("ocupado") && showOnlyFree){
-      td.classList.add("ocupado-filtro"); // gris oscuro, editable
+      td.classList.add("ocupado-filtro");
     }
-    // pasado se mantiene
     if(td.classList.contains("pasado")){
       td.classList.remove("libre","ocupado","ocupado-filtro");
       td.classList.add("pasado");
@@ -156,71 +154,71 @@ function aplicarFiltro(){
   });
 }
 
-// Cargar semana y datos
 function cargarSemana(){
   crearTabla();
   actualizarHeader();
 
-  tbody.querySelectorAll("tr").forEach((tr,rowIndex)=>{
-    const hora = horas[rowIndex];
-    dias.forEach((dia,colIndex)=>{
-      const td = tr.children[colIndex+1];
-      const slotDate = new Date(currentMonday);
-      slotDate.setDate(slotDate.getDate()+colIndex);
-      const now = new Date(); now.setHours(0,0,0,0);
+  db.ref("citas").on("value", snap => {
+    const data = snap.val() || {};
 
-      const key = `${dia}_${hora}`;
-      db.ref("citas/"+key).on("value",snap=>{
-        const val = snap.val()||"";
+    tbody.querySelectorAll("tr").forEach((tr,rowIndex)=>{
+      const hora = horas[rowIndex];
+      dias.forEach((dia,colIndex)=>{
+        const td = tr.children[colIndex + 1];
+        const key = `${dia}_${hora}`;
+        const val = data[key] || "";
+
         td.textContent = val;
-
-        // Limpiar clases
         td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
 
+        const slotDate = new Date(currentMonday);
+        slotDate.setDate(slotDate.getDate() + colIndex);
+        const now = new Date(); now.setHours(0,0,0,0);
+
         if(slotDate < now){
-          td.classList.add("pasado"); // gris clarito
+          td.classList.add("pasado");
         } else if(val===""){
-          td.classList.add("libre");   // verde editable
+          td.classList.add("libre");
         } else {
-          td.classList.add("ocupado"); // rojo editable
+          td.classList.add("ocupado");
           if(showOnlyFree){
-            td.classList.add("ocupado-filtro"); // gris oscuro solo visual, editable
+            td.classList.add("ocupado-filtro");
           }
         }
-
-        aplicarFiltro();
-        actualizarContador();
       });
-
-      td.onclick = ()=>{
-        if(td.classList.contains("pasado")) return; // solo bloquea pasado
-
-        const input=document.createElement("input");
-        input.value=td.textContent;
-        td.textContent="";
-        td.appendChild(input);
-        input.focus();
-
-        input.onblur=()=>{
-          const val=input.value.trim();
-          db.ref("citas/"+key).set(val);
-          td.removeChild(input);
-        };
-        input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
-      };
     });
+
+    aplicarFiltro();
+    actualizarContador();
+  });
+
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    td.onclick = ()=>{
+      if(td.classList.contains("pasado")) return;
+
+      const input=document.createElement("input");
+      input.value=td.textContent;
+      td.textContent="";
+      td.appendChild(input);
+      input.focus();
+
+      const key = `${dias[td.cellIndex-1]}_${horas[td.parentElement.rowIndex]}`;
+
+      input.onblur=()=>{
+        const val=input.value.trim();
+        db.ref("citas/"+key).set(val);
+        td.removeChild(input);
+      };
+      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
+    };
   });
 }
 
-// Botones filtro
 document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
-
-// Botones semana
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-// Inicializar
 cargarSemana();
 </script>
 </body>
