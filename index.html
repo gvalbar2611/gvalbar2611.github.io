@@ -16,18 +16,15 @@ th, td { border:1px solid #ccc; padding:5px; text-align:center; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
 
-/* Estados de las celdas */
 td.libre { background:#c8e6c9; cursor:text; }           
 td.ocupado { background:#ef9a9a; cursor:text; }        
 td.ocupado-filtro { background:#b0b0b0; cursor:text; } 
 td.pasado { background:#e0e0e0; cursor:not-allowed; }  
 
-/* Hover para destacar editable */
 td.libre:hover { background:#a5d6a7; }           
 td.ocupado:hover { background:#ef6c6c; }         
 td.ocupado-filtro:hover { background:#999999; }  
 
-/* Responsive para móviles */
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; white-space: nowrap; }
   th, td { padding: 8px 5px; font-size: 14px; min-width: 60px; }
@@ -104,11 +101,15 @@ function crearTabla(){
     const thHora=document.createElement("th");
     thHora.textContent=hora;
     tr.appendChild(thHora);
-    dias.forEach(_=>{
+
+    dias.forEach(dia=>{
       const td=document.createElement("td");
       td.className="slot";
+      td.dataset.dia = dia;
+      td.dataset.hora = hora;
       tr.appendChild(td);
     });
+
     tbody.appendChild(tr);
   });
 }
@@ -135,8 +136,8 @@ function actualizarHeader(){
 
 function actualizarContador(){
   let total=0;
-  tbody.querySelectorAll("td.slot").forEach(td=>{
-    if(td.textContent.trim()!=="") total++;
+  tbody.querySelectorAll("td.slot input").forEach(input=>{
+    if(input.value.trim()!=="") total++;
   });
   counterDiv.textContent="Clientes agendados: "+total;
 }
@@ -147,9 +148,13 @@ function aplicarFiltro(){
     if(td.classList.contains("ocupado") && showOnlyFree){
       td.classList.add("ocupado-filtro");
     }
+    const input = td.querySelector("input");
     if(td.classList.contains("pasado")){
       td.classList.remove("libre","ocupado","ocupado-filtro");
       td.classList.add("pasado");
+      if(input) input.disabled = true;
+    } else if(input) {
+      input.disabled = false;
     }
   });
 }
@@ -157,60 +162,51 @@ function aplicarFiltro(){
 function cargarSemana(){
   crearTabla();
   actualizarHeader();
+  db.ref("citas").off();
 
-  db.ref("citas").on("value", snap => {
+  db.ref("citas").once("value").then(snap=>{
     const data = snap.val() || {};
 
-    tbody.querySelectorAll("tr").forEach((tr,rowIndex)=>{
-      const hora = horas[rowIndex];
-      dias.forEach((dia,colIndex)=>{
-        const td = tr.children[colIndex + 1];
-        const key = `${dia}_${hora}`;
-        const val = data[key] || "";
+    tbody.querySelectorAll("td.slot").forEach(td=>{
+      const slotDate = new Date(currentMonday);
+      slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
 
-        td.textContent = val;
-        td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+      const key = `${td.dataset.dia}_${td.dataset.hora}`;
+      const val = data[key] || "";
 
-        const slotDate = new Date(currentMonday);
-        slotDate.setDate(slotDate.getDate() + colIndex);
-        const now = new Date(); now.setHours(0,0,0,0);
+      if(!td.querySelector("input")){
+        const input = document.createElement("input");
+        input.value = val;
+        td.appendChild(input);
 
-        if(slotDate < now){
-          td.classList.add("pasado");
-        } else if(val===""){
-          td.classList.add("libre");
-        } else {
-          td.classList.add("ocupado");
-          if(showOnlyFree){
-            td.classList.add("ocupado-filtro");
-          }
+        input.onblur = ()=>{
+          db.ref("citas/"+key).set(input.value.trim());
+          aplicarFiltro();
+          actualizarContador();
+        };
+        input.onkeydown = e=>{ if(e.key==="Enter") input.blur(); };
+      } else {
+        td.querySelector("input").value = val;
+      }
+
+      td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+      const now = new Date(); now.setHours(0,0,0,0);
+
+      if(slotDate < now){
+        td.classList.add("pasado");
+      } else if(val===""){
+        td.classList.add("libre");
+      } else {
+        td.classList.add("ocupado");
+        if(showOnlyFree){
+          td.classList.add("ocupado-filtro");
         }
-      });
+      }
     });
 
     aplicarFiltro();
     actualizarContador();
-  });
-
-  tbody.querySelectorAll("td.slot").forEach(td=>{
-    td.onclick = ()=>{
-      if(td.classList.contains("pasado")) return;
-
-      const input=document.createElement("input");
-      input.value=td.textContent;
-      td.textContent="";
-      td.appendChild(input);
-      input.focus();
-
-      const key = `${dias[td.cellIndex-1]}_${horas[td.parentElement.rowIndex]}`;
-
-      input.onblur=()=>{
-        const val=input.value.trim();
-        db.ref("citas/"+key).set(val);
-        td.removeChild(input);
-      };
-      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
-    };
+    weekLabel.textContent = `Semana del ${currentMonday.getDate()}/${currentMonday.getMonth()+1}`;
   });
 }
 
