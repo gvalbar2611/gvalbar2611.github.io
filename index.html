@@ -16,8 +16,9 @@ th, td { border:1px solid #ccc; padding:5px; text-align:center; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; cursor:pointer; position:relative; }
 td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
-td.libre { background:#c8e6c9; }
-td.ocupado { background:#ef9a9a; }
+td.libre { background:#c8e6c9; }        /* verde */
+td.ocupado { background:#ef9a9a; }      /* rojo */
+td.ocupado.filtro { background:#cccccc; } /* gris cuando se filtra */
 </style>
 </head>
 <body>
@@ -74,13 +75,12 @@ function actualizarContador(){
   counterDiv.textContent="Clientes agendados: "+total;
 }
 
-// Función para aplicar filtro correctamente
+// Función para aplicar filtro
 function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
-    if(showOnlyFree){
-      td.style.display = (td.textContent.trim()==="") ? "table-cell" : "none";
-    } else {
-      td.style.display = "table-cell";
+    td.classList.remove("filtro");
+    if(showOnlyFree && td.classList.contains("ocupado")){
+      td.classList.add("filtro"); // poner gris en ocupados
     }
   });
 }
@@ -100,9 +100,10 @@ horas.forEach(hora=>{
     db.ref("citas/"+key).on("value", snap=>{
       const val = snap.val()||"";
       td.textContent = val;
-      td.classList.toggle("libre", val==="");
-      td.classList.toggle("ocupado", val!=="");
-      aplicarFiltro(); // Aplicar filtro siempre que cambie un slot
+      td.classList.remove("libre","ocupado");
+      if(val==="") td.classList.add("libre");
+      else td.classList.add("ocupado");
+      aplicarFiltro();
       actualizarContador();
     });
 
