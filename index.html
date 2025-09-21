@@ -14,12 +14,18 @@ button:hover { background:#1976d2; }
 table { width:100%; border-collapse: collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:5px; text-align:center; }
 th { background:#2196f3; color:white; }
-td.slot { min-width:80px; cursor:pointer; position:relative; }
-td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
-td.libre { background:#c8e6c9; }        /* verde */
-td.ocupado { background:#ef9a9a; }      /* rojo */
-td.ocupado.filtro { background:#cccccc; cursor: not-allowed; } /* gris cuando se filtra */
-td.pasado { background:#e0e0e0; cursor: not-allowed; } /* gris para días pasados */
+td.slot { min-width:80px; position:relative; }
+
+/* Estados de las celdas */
+td.libre { background:#c8e6c9; cursor:text; }           /* verde editable */
+td.ocupado { background:#ef9a9a; cursor:text; }        /* rojo editable */
+td.ocupado.filtro { background:#b0b0b0; cursor:text; } /* gris oscuro filtrado editable */
+td.pasado { background:#e0e0e0; cursor:not-allowed; }  /* gris clarito no editable */
+
+/* Hover para destacar editable */
+td.libre:hover { background:#a5d6a7; }           /* verde más intenso */
+td.ocupado:hover { background:#ef6c6c; }         /* rojo más intenso */
+td.ocupado.filtro:hover { background:#999999; }  /* gris oscuro más intenso */
 
 /* Responsive para móviles */
 @media (max-width: 768px) {
@@ -140,11 +146,11 @@ function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("filtro");
     if(td.classList.contains("ocupado") && showOnlyFree){
-      td.classList.add("filtro"); // gris
+      td.classList.add("filtro"); // gris oscuro
     }
     if(td.classList.contains("pasado")){
       td.classList.remove("libre","ocupado","filtro");
-      td.classList.add("pasado");
+      td.classList.add("pasado"); // gris clarito
     }
   });
 }
@@ -166,7 +172,7 @@ function cargarSemana(){
       db.ref("citas/"+key).on("value",snap=>{
         const val = snap.val()||"";
         td.textContent = val;
-        td.classList.remove("libre","ocupado","pasado");
+        td.classList.remove("libre","ocupado","pasado","filtro");
         if(val==="") td.classList.add("libre");
         else td.classList.add("ocupado");
         if(slotDate<now) td.classList.add("pasado");
@@ -175,8 +181,8 @@ function cargarSemana(){
       });
 
       td.onclick = ()=>{
+        // No editable si es pasado
         if(td.classList.contains("pasado")) return;
-        if(td.classList.contains("ocupado") && showOnlyFree) return;
 
         const input=document.createElement("input");
         input.value=td.textContent;
