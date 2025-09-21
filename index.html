@@ -64,6 +64,7 @@ thead th.dia {
   <button id="showAll">Mostrar todas las citas</button>
   <button id="showFree">Mostrar solo libres</button>
   <button id="loginBtn">Iniciar sesión con Google</button>
+  <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
   <div id="counter">Clientes agendados: 0</div>
 </div>
 
@@ -104,6 +105,7 @@ const tbody=table.querySelector("tbody");
 const counterDiv=document.getElementById("counter");
 const weekLabel = document.getElementById("weekLabel");
 const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 
 let showOnlyFree=false;
 let currentMonday = getMonday(new Date());
@@ -230,42 +232,43 @@ function cargarSemana(){
     tbody.querySelectorAll("td.slot").forEach(td=>{
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const fechaStr = slotDate.toISOString().split('T')[0];
 
       const key = `${fechaStr}_${td.dataset.hora}`;
-      const val = data[key] || "";
+      const valObj = data[key] || {cliente:""};
 
       if(!td.querySelector("input")){
         const input = document.createElement("input");
-        input.value = val.cliente || val;
+        input.value = valObj.cliente || "";
+        td.dataset.uid = valObj.uid || "";
+        td.dataset.nombre = valObj.nombre || "";
         td.appendChild(input);
 
         input.onblur = ()=>{ 
-          if(userLoggedIn) {
-            db.ref("citas/"+key).set({
-              cliente: input.value.trim(),
-              uid: auth.currentUser.uid,
-              nombre: auth.currentUser.displayName
-            });
-          }
+          if(!userLoggedIn) return;
+          const user = auth.currentUser;
+          db.ref("citas/"+key).set({
+            cliente: input.value.trim(),
+            uid: user.uid,
+            nombre: user.displayName
+          });
           actualizarEstado(td);
         };
-        
         input.onkeydown = e=>{
           if(e.key==="Enter"){
-            if(userLoggedIn) {
-              db.ref("citas/"+key).set({
-                cliente: input.value.trim(),
-                uid: auth.currentUser.uid,
-                nombre: auth.currentUser.displayName
-              });
-            }
+            if(!userLoggedIn) return;
+            const user = auth.currentUser;
+            db.ref("citas/"+key).set({
+              cliente: input.value.trim(),
+              uid: user.uid,
+              nombre: user.displayName
+            });
             actualizarEstado(td);
             input.blur();
           }
         };
       } else {
-        input.value = val.cliente || val;
+        td.querySelector("input").value = valObj.cliente || "";
       }
 
       actualizarEstado(td);
@@ -279,28 +282,36 @@ document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFi
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-// Login con Google
+// Login Google
 loginBtn.onclick = ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-  .then(result=>{
+  auth.signInWithPopup(provider).then(result=>{
     userLoggedIn = true;
-    loginBtn.textContent = "Logueado: " + result.user.displayName;
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
     cargarSemana();
-  })
-  .catch(error=>{
+  }).catch(error=>{
     alert("Error al iniciar sesión: " + error.message);
   });
 };
 
-// Detectar logout / estado
+// Logout
+logoutBtn.onclick = ()=>{
+  auth.signOut().then(()=>{
+    userLoggedIn = false;
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+    cargarSemana();
+  }).catch(error=>{
+    alert("Error al cerrar sesión: " + error.message);
+  });
+};
+
+// Detectar cambios de estado de autenticación
 auth.onAuthStateChanged(user=>{
   userLoggedIn = !!user;
-  if(!user){
-    loginBtn.textContent = "Iniciar sesión con Google";
-  } else {
-    loginBtn.textContent = "Logueado: " + user.displayName;
-  }
+  loginBtn.style.display = user ? "none" : "inline-block";
+  logoutBtn.style.display = user ? "inline-block" : "none";
   cargarSemana();
 });
 
