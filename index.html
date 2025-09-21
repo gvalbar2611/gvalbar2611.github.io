@@ -12,7 +12,186 @@ button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; back
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
 table { width:100%; border-collapse: collapse; margin-top:10px; }
+th, td { border:1px solid #ccc; padding:5px; text-align:center; }<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citas Gavabarber</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+h1 { text-align:center; color:#222; }
+.controls, .week-nav { display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; flex-wrap:wrap; gap:10px; }
+button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; }
+button:hover { background:#1976d2; }
+#counter { font-weight:bold; }
+table { width:100%; border-collapse: collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:5px; text-align:center; }
+th { background:#2196f3; color:white; }
+td.slot { min-width:80px; cursor:pointer; position:relative; }
+td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
+td.libre { background:#c8e6c9; }        /* verde */
+td.ocupado { background:#ef9a9a; }      /* rojo */
+td.ocupado.filtro { background:#cccccc; cursor: not-allowed; } /* gris cuando se filtra */
+td.pasado { background:#e0e0e0; cursor: not-allowed; } /* gris para días pasados */
+</style>
+</head>
+<body>
+
+<h1>Agenda Barbería Pro - Multi Semana</h1>
+
+<div class="week-nav">
+  <button id="prevWeek">← Semana anterior</button>
+  <span id="weekLabel">Semana</span>
+  <button id="nextWeek">Semana siguiente →</button>
+</div>
+
+<div class="controls">
+  <button id="showAll">Mostrar todas las citas</button>
+  <button id="showFree">Mostrar solo libres</button>
+  <div id="counter">Clientes agendados: 0</div>
+</div>
+
+<table id="calendar">
+<thead><tr><th>Hora</th></tr></thead>
+<tbody></tbody>
+</table>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAjXrpMMKPMc9KsrpZ_ymv8CMAKME8l0Fs",
+  authDomain: "agenda-barberia-59b4c.firebaseapp.com",
+  databaseURL: "https://agenda-barberia-59b4c-default-rtdb.firebaseio.com",
+  projectId: "agenda-barberia-59b4c",
+  storageBucket: "agenda-barberia-59b4c.firebasestorage.app",
+  messagingSenderId: "541388928781",
+  appId: "1:541388928781:web:89db455c12f67b3fee6244",
+  measurementId: "G-LG0DL5RXP0"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const horas=[];
+for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
+
+const table=document.getElementById("calendar");
+const thead=table.querySelector("thead tr");
+const tbody=table.querySelector("tbody");
+const counterDiv=document.getElementById("counter");
+const weekLabel = document.getElementById("weekLabel");
+
+let showOnlyFree=false;
+let semanaActual = getWeekId(new Date());
+weekLabel.textContent = semanaActual;
+
+// Función para actualizar contador
+function actualizarContador(){
+  let total=0;
+  tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
+  counterDiv.textContent="Clientes agendados: "+total;
+}
+
+// Función para aplicar filtro
+function aplicarFiltro(){
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    td.classList.remove("filtro");
+    if(showOnlyFree && td.classList.contains("ocupado")){
+      td.classList.add("filtro"); // gris
+    }
+  });
+}
+
+// Función para calcular ID de semana YYYY-Www
+function getWeekId(date){
+  const oneJan = new Date(date.getFullYear(),0,1);
+  const numberOfDays = Math.floor((date - oneJan) / (24*60*60*1000));
+  const week = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+  return date.getFullYear() + "-W" + week;
+}
+
+// Parse YYYY-Www a Date (primer día de la semana)
+function parseWeekId(weekId){
+  const [year, w] = weekId.split("-W");
+  const d = new Date(year,0,1);
+  const week = parseInt(w,10);
+  d.setDate(d.getDate() + (week-1)*7);
+  return d;
+}
+
+// Obtener fecha completa del slot
+function getSlotDate(dia, semanaId){
+  const d = parseWeekId(semanaId); // primer día de la semana
+  const diaIndex = dias.indexOf(dia); // 0=Lunes
+  d.setDate(d.getDate() + diaIndex);
+  return d;
+}
+
+// Obtener array de fechas con formato "Lunes 23/09"
+function getWeekDates(semanaId){
+  const startDate = parseWeekId(semanaId);
+  return dias.map((dia, index) => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + index);
+    const day = d.getDate();
+    const month = d.getMonth()+1;
+    return `${dia} ${day}/${month}`;
+  });
+}
+
+// Crear filas por hora y días
+function crearTabla(){
+  tbody.innerHTML = "";
+  horas.forEach(hora=>{
+    const tr=document.createElement("tr");
+    const thHora=document.createElement("th");
+    thHora.textContent=hora;
+    tr.appendChild(thHora);
+    dias.forEach(_=>{ const td=document.createElement("td"); td.className="slot"; tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+}
+
+// Cargar semana y datos de Firebase
+function cargarSemana(){
+  // Actualizar encabezado con fechas
+  const fechasSemana = getWeekDates(semanaActual);
+  thead.querySelectorAll("th:not(:first-child)").forEach(th=>th.remove());
+  fechasSemana.forEach(fechaStr => {
+    const th = document.createElement("th");
+    th.textContent = fechaStr;
+    thead.appendChild(th);
+  });
+
+  crearTabla();
+
+  tbody.querySelectorAll("tr").forEach((tr, rowIndex)=>{
+    const hora = horas[rowIndex];
+    dias.forEach((dia, colIndex)=>{
+      const td = tr.children[colIndex+1];
+      const key = dia + "_" + hora;
+      const slotDate = getSlotDate(dia, semanaActual);
+      const now = new Date(); now.setHours(0,0,0,0);
+
+      db.ref("citas/"+semanaActual+"/"+key).on("value", snap=>{
+        const val = snap.val()||"";
+        td.textContent = val;
+        td.classList.remove("libre","ocupado","pasado");
+        if(val==="") td.classList.add("libre");
+        else td.classList.add("ocupado");
+        if(slotDate < now) td.classList.add("pasado");
+        aplicarFiltro();
+        actualizarContador();
+      });
+
+      td.onclick = () => {
+        if(td.classList.contains("pasado")) return;
+        if(td.classList.contains("ocupado"
+
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; cursor:pointer; position:relative; }
 td input { width:100%; border:none; padding:5px; box-sizing:border-box; text-align:center; background:transparent; }
