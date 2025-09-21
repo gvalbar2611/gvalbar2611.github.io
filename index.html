@@ -28,7 +28,7 @@ td.pasado { background:#e0e0e0; cursor: not-allowed; } /* gris para días pasado
 
 <div class="week-nav">
   <button id="prevWeek">← Semana anterior</button>
-  <span id="weekLabel">Semana</span>
+  <span id="weekLabel">Semana actual</span>
   <button id="nextWeek">Semana siguiente →</button>
 </div>
 
@@ -48,20 +48,19 @@ td.pasado { background:#e0e0e0; cursor: not-allowed; } /* gris para días pasado
 
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyAjXrpMMKPMc9KsrpZ_ymv8CMAKME8l0Fs",
-  authDomain: "agenda-barberia-59b4c.firebaseapp.com",
-  databaseURL: "https://agenda-barberia-59b4c-default-rtdb.firebaseio.com",
-  projectId: "agenda-barberia-59b4c",
-  storageBucket: "agenda-barberia-59b4c.firebasestorage.app",
-  messagingSenderId: "541388928781",
-  appId: "1:541388928781:web:89db455c12f67b3fee6244",
-  measurementId: "G-LG0DL5RXP0"
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "XXXXX",
+  appId: "XXXXX"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ✅ Ahora incluye el domingo
+// Añadimos domingo
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
 for(let h=9;h<=20;h++){ horas.push(h+":00"); horas.push(h+":30"); }
@@ -73,61 +72,17 @@ const counterDiv=document.getElementById("counter");
 const weekLabel = document.getElementById("weekLabel");
 
 let showOnlyFree=false;
-let semanaActual = getWeekId(new Date());
-weekLabel.textContent = semanaActual;
 
-// Función para actualizar contador
-function actualizarContador(){
-  let total=0;
-  tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
-  counterDiv.textContent="Clientes agendados: "+total;
-}
+// Fecha del lunes actual
+let currentMonday = getMonday(new Date());
 
-// Función para aplicar filtro
-function aplicarFiltro(){
-  tbody.querySelectorAll("td.slot").forEach(td=>{
-    td.classList.remove("filtro");
-    if(showOnlyFree && td.classList.contains("ocupado")){
-      td.classList.add("filtro"); // gris
-    }
-  });
-}
-
-// Función para calcular ID de semana YYYY-Www
-function getWeekId(date){
-  const oneJan = new Date(date.getFullYear(),0,1);
-  const numberOfDays = Math.floor((date - oneJan) / (24*60*60*1000));
-  const week = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
-  return date.getFullYear() + "-W" + week;
-}
-
-// Parse YYYY-Www a Date (primer día de la semana)
-function parseWeekId(weekId){
-  const [year, w] = weekId.split("-W");
-  const d = new Date(year,0,1);
-  const week = parseInt(w,10);
-  d.setDate(d.getDate() + (week-1)*7);
-  return d;
-}
-
-// Obtener fecha completa del slot
-function getSlotDate(dia, semanaId){
-  const d = parseWeekId(semanaId); // primer día de la semana
-  const diaIndex = dias.indexOf(dia); // 0=Lunes
-  d.setDate(d.getDate() + diaIndex);
-  return d;
-}
-
-// Obtener array de fechas con formato "Lunes 23/09"
-function getWeekDates(semanaId){
-  const startDate = parseWeekId(semanaId);
-  return dias.map((dia, index) => {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + index);
-    const day = d.getDate();
-    const month = d.getMonth()+1;
-    return `${dia} ${day}/${month}`;
-  });
+function getMonday(d){
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day; // si es domingo, -6
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
 }
 
 // Crear filas por hora y días
@@ -143,75 +98,96 @@ function crearTabla(){
   });
 }
 
-// Cargar semana y datos de Firebase
-function cargarSemana(){
-  // Actualizar encabezado con fechas
-  const fechasSemana = getWeekDates(semanaActual);
+// Obtener array de fechas para encabezado
+function getWeekDates(monday){
+  return dias.map((dia,index)=>{
+    const d = new Date(monday);
+    d.setDate(d.getDate() + index);
+    const day = d.getDate().toString().padStart(2,'0');
+    const month = (d.getMonth()+1).toString().padStart(2,'0');
+    return `${dia} ${day}/${month}`;
+  });
+}
+
+// Actualizar encabezado con fechas
+function actualizarHeader(){
   thead.querySelectorAll("th:not(:first-child)").forEach(th=>th.remove());
-  fechasSemana.forEach(fechaStr => {
-    const th = document.createElement("th");
+  const fechas = getWeekDates(currentMonday);
+  fechas.forEach(fechaStr=>{
+    const th=document.createElement("th");
     th.textContent = fechaStr;
     thead.appendChild(th);
   });
+}
 
+// Actualizar contador
+function actualizarContador(){
+  let total=0;
+  tbody.querySelectorAll("td.slot").forEach(td=>{ if(td.textContent.trim()!=="") total++; });
+  counterDiv.textContent="Clientes agendados: "+total;
+}
+
+// Aplicar filtro de solo libres
+function aplicarFiltro(){
+  tbody.querySelectorAll("td.slot").forEach(td=>{
+    td.classList.remove("filtro");
+    if(showOnlyFree && td.classList.contains("ocupado")) td.classList.add("filtro");
+  });
+}
+
+// Cargar semana y datos
+function cargarSemana(){
   crearTabla();
+  actualizarHeader();
 
-  tbody.querySelectorAll("tr").forEach((tr, rowIndex)=>{
+  tbody.querySelectorAll("tr").forEach((tr,rowIndex)=>{
     const hora = horas[rowIndex];
-    dias.forEach((dia, colIndex)=>{
+    dias.forEach((dia,colIndex)=>{
       const td = tr.children[colIndex+1];
-      const key = dia + "_" + hora;
-      const slotDate = getSlotDate(dia, semanaActual);
+      const slotDate = new Date(currentMonday);
+      slotDate.setDate(slotDate.getDate()+colIndex);
       const now = new Date(); now.setHours(0,0,0,0);
 
-      db.ref("citas/"+semanaActual+"/"+key).on("value", snap=>{
+      const key = `${dia}_${hora}`;
+      db.ref("citas/"+key).on("value",snap=>{
         const val = snap.val()||"";
         td.textContent = val;
         td.classList.remove("libre","ocupado","pasado");
         if(val==="") td.classList.add("libre");
         else td.classList.add("ocupado");
-        if(slotDate < now) td.classList.add("pasado");
+        if(slotDate<now) td.classList.add("pasado");
         aplicarFiltro();
         actualizarContador();
       });
 
-      td.onclick = () => {
+      td.onclick = ()=>{
         if(td.classList.contains("pasado")) return;
         if(td.classList.contains("ocupado") && showOnlyFree) return;
 
-        const input = document.createElement("input");
-        input.value = td.textContent;
-        td.textContent = "";
+        const input=document.createElement("input");
+        input.value=td.textContent;
+        td.textContent="";
         td.appendChild(input);
         input.focus();
 
-        input.onblur = () => {
-          const val = input.value.trim();
-          db.ref("citas/"+semanaActual+"/"+key).set(val);
+        input.onblur=()=>{
+          const val=input.value.trim();
+          db.ref("citas/"+key).set(val);
           td.removeChild(input);
         };
-        input.onkeydown = (e) => { if(e.key==="Enter") input.blur(); };
+        input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
       };
     });
   });
 }
 
 // Botones filtro
-document.getElementById("showAll").onclick = () => { showOnlyFree=false; aplicarFiltro(); };
-document.getElementById("showFree").onclick = () => { showOnlyFree=true; aplicarFiltro(); };
+document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
+document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 
 // Botones semana
-document.getElementById("prevWeek").onclick = () => changeWeek(-1);
-document.getElementById("nextWeek").onclick = () => changeWeek(1);
-
-// Cambiar semana
-function changeWeek(offset){
-  const d = parseWeekId(semanaActual);
-  d.setDate(d.getDate() + offset*7);
-  semanaActual = getWeekId(d);
-  weekLabel.textContent = semanaActual;
-  cargarSemana();
-}
+document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
+document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
 // Inicializar
 cargarSemana();
