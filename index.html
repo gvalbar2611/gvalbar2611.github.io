@@ -14,20 +14,31 @@ button:hover { background:#1976d2; }
 table { width:100%; border-collapse: collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:5px; text-align:center; }
 th { background:#2196f3; color:white; }
-td.slot { min-width:80px; position:relative; }
+td.slot { min-width:80px; position:relative; padding:0; }
+
+/* Input ocupa toda la celda */
+td.slot input {
+  width:100%;
+  height:100%;
+  border:none;
+  padding:5px;
+  box-sizing:border-box;
+  text-align:center;
+  font-size:14px;
+  background:transparent;
+}
 
 /* Estados de las celdas */
-td.libre { background:#c8e6c9; cursor:text; }           
-td.ocupado { background:#ef9a9a; cursor:text; }        
-td.ocupado-filtro { background:#b0b0b0; cursor:text; } 
-td.pasado { background:#e0e0e0; cursor:not-allowed; }  
+td.libre input { background:#c8e6c9; cursor:text; }           
+td.ocupado input { background:#ef9a9a; cursor:text; }        
+td.ocupado-filtro input { background:#b0b0b0; cursor:text; } 
+td.pasado input { background:#e0e0e0; cursor:not-allowed; }  
 
-/* Hover para destacar editable */
-td.libre:hover { background:#a5d6a7; }           
-td.ocupado:hover { background:#ef6c6c; }         
-td.ocupado-filtro:hover { background:#999999; }  
+/* Hover */
+td.libre input:hover { background:#a5d6a7; }           
+td.ocupado input:hover { background:#ef6c6c; }         
+td.ocupado-filtro input:hover { background:#999999; }  
 
-/* Responsive para móviles */
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; white-space: nowrap; }
   th, td { padding: 8px 5px; font-size: 14px; min-width: 60px; }
@@ -71,7 +82,6 @@ const firebaseConfig = {
   appId: "1:541388928781:web:89db455c12f67b3fee6244",
   measurementId: "G-LG0DL5RXP0"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -104,9 +114,15 @@ function crearTabla(){
     const thHora=document.createElement("th");
     thHora.textContent=hora;
     tr.appendChild(thHora);
-    dias.forEach(_=>{
+    dias.forEach(dia=>{
       const td=document.createElement("td");
       td.className="slot";
+      td.dataset.dia = dia;
+      td.dataset.hora = hora;
+
+      const input = document.createElement("input");
+      input.value = "";
+      td.appendChild(input);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -135,8 +151,8 @@ function actualizarHeader(){
 
 function actualizarContador(){
   let total=0;
-  tbody.querySelectorAll("td.slot").forEach(td=>{
-    if(td.textContent.trim()!=="") total++;
+  tbody.querySelectorAll("td.slot input").forEach(input=>{
+    if(input.value.trim()!=="") total++;
   });
   counterDiv.textContent="Clientes agendados: "+total;
 }
@@ -150,6 +166,9 @@ function aplicarFiltro(){
     if(td.classList.contains("pasado")){
       td.classList.remove("libre","ocupado","ocupado-filtro");
       td.classList.add("pasado");
+      td.querySelector("input").disabled = true;
+    } else {
+      td.querySelector("input").disabled = false;
     }
   });
 }
@@ -157,68 +176,53 @@ function aplicarFiltro(){
 function cargarSemana(){
   crearTabla();
   actualizarHeader();
+  db.ref("citas").off();
 
-  db.ref("citas").on("value", snap => {
+  db.ref("citas").once("value").then(snap=>{
     const data = snap.val() || {};
 
-    tbody.querySelectorAll("tr").forEach((tr,rowIndex)=>{
-      const hora = horas[rowIndex];
-      dias.forEach((dia,colIndex)=>{
-        const td = tr.children[colIndex + 1];
-        const key = `${dia}_${hora}`;
-        const val = data[key] || "";
+    tbody.querySelectorAll("td.slot").forEach(td=>{
+      const slotDate = new Date(currentMonday);
+      slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
+      const key = `${td.dataset.dia}_${td.dataset.hora}`;
+      const val = data[key] || "";
+      td.querySelector("input").value = val;
 
-        td.textContent = val;
-        td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
-
-        const slotDate = new Date(currentMonday);
-        slotDate.setDate(slotDate.getDate() + colIndex);
-        const now = new Date(); now.setHours(0,0,0,0);
-
-        if(slotDate < now){
-          td.classList.add("pasado");
-        } else if(val===""){
-          td.classList.add("libre");
-        } else {
-          td.classList.add("ocupado");
-          if(showOnlyFree){
-            td.classList.add("ocupado-filtro");
-          }
+      td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+      const now = new Date(); now.setHours(0,0,0,0);
+      if(slotDate < now){
+        td.classList.add("pasado");
+      } else if(val===""){
+        td.classList.add("libre");
+      } else {
+        td.classList.add("ocupado");
+        if(showOnlyFree){
+          td.classList.add("ocupado-filtro");
         }
-      });
+      }
+
+      const input = td.querySelector("input");
+      input.disabled = td.classList.contains("pasado");
+      input.onblur = ()=>{
+        db.ref("citas/"+key).set(input.value.trim());
+        aplicarFiltro();
+        actualizarContador();
+      };
     });
 
     aplicarFiltro();
     actualizarContador();
-  });
-
-  tbody.querySelectorAll("td.slot").forEach(td=>{
-    td.onclick = ()=>{
-      if(td.classList.contains("pasado")) return;
-
-      const input=document.createElement("input");
-      input.value=td.textContent;
-      td.textContent="";
-      td.appendChild(input);
-      input.focus();
-
-      const key = `${dias[td.cellIndex-1]}_${horas[td.parentElement.rowIndex]}`;
-
-      input.onblur=()=>{
-        const val=input.value.trim();
-        db.ref("citas/"+key).set(val);
-        td.removeChild(input);
-      };
-      input.onkeydown=(e)=>{ if(e.key==="Enter") input.blur(); };
-    };
+    weekLabel.textContent = `Semana del ${currentMonday.getDate()}/${currentMonday.getMonth()+1}`;
   });
 }
 
+// --- Botones ---
 document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
 document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
+// Inicializar
 cargarSemana();
 </script>
 </body>
