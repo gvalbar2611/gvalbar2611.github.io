@@ -228,7 +228,6 @@ function cargarSemana(){
     const data = snap.val() || {};
 
     tbody.querySelectorAll("td.slot").forEach(td=>{
-      // Creamos fecha YYYY-MM-DD para que cada semana sea independiente
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
       const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -269,6 +268,11 @@ document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(curren
 
 // Inicializar
 cargarSemana();
+
+// Bloquea los slots pasados automáticamente cada minuto
+setInterval(()=>{
+  tbody.querySelectorAll("td.slot").forEach(td => actualizarEstado(td));
+}, 60000); // cada 60 segundos
 </script>
 </body>
 </html>
