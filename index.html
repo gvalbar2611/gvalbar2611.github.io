@@ -15,17 +15,36 @@ table { width:100%; border-collapse: collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:0; text-align:center; height:35px; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
-td.slot input { width: 100%; height: 100%; border: none; padding: 5px; box-sizing: border-box; text-align: center; font-size: 14px; background: transparent; }
+
+/* Input ocupa toda la celda */
+td.slot input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 5px;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 14px;
+  background: transparent;
+}
+
+/* Estados de las celdas */
 td.libre input { background:#c8e6c9; cursor:text; }           
 td.ocupado input { background:#ef9a9a; cursor:text; }        
 td.ocupado-filtro input { background:#b0b0b0; cursor:not-allowed; } 
 td.pasado input { background:#e0e0e0; cursor:not-allowed; }  
+
 td.libre:hover input { background:#a5d6a7; }           
 td.ocupado:hover input { background:#ef6c6c; }         
 td.ocupado-filtro:hover input { background:#999999; }  
-thead th.dia { background: #bbdefb; color: #0d47a1; font-weight: bold; }
-#authContainer { text-align:center; margin-bottom:20px; }
-input[type=email], input[type=password] { padding:6px; margin:4px; border-radius:4px; border:1px solid #ccc; }
+
+/* Fondo suave para cada día */
+thead th.dia {
+  background: #bbdefb; /* azul claro */
+  color: #0d47a1;
+  font-weight: bold;
+}
+
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; white-space: nowrap; }
   th, td { padding: 0 5px; font-size: 14px; min-width: 60px; height:30px; }
@@ -38,36 +57,24 @@ input[type=email], input[type=password] { padding:6px; margin:4px; border-radius
 
 <h1>Citas Gavabarber</h1>
 
-<div id="authContainer">
-  <h3>Inicia sesión o regístrate</h3>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Contraseña"><br>
-  <button id="loginBtn">Login</button>
-  <button id="registerBtn">Registrarse</button><br><br>
-  <button id="googleLoginBtn">Iniciar sesión con Google</button>
-  <div id="authMessage"></div>
-</div>
-
-<div class="week-nav" style="display:none;">
+<div class="week-nav">
   <button id="prevWeek">← Semana anterior</button>
   <span id="weekLabel">Semana actual</span>
   <button id="nextWeek">Semana siguiente →</button>
 </div>
 
-<div class="controls" style="display:none;">
+<div class="controls">
   <button id="showAll">Mostrar todas las citas</button>
   <button id="showFree">Mostrar solo libres</button>
-  <button id="logoutBtn">Cerrar sesión</button>
   <div id="counter">Clientes agendados: 0</div>
 </div>
 
-<table id="calendar" style="display:none;">
+<table id="calendar">
 <thead><tr><th>Hora</th></tr></thead>
 <tbody></tbody>
 </table>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
@@ -84,7 +91,6 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const auth = firebase.auth();
 
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const horas=[];
@@ -98,9 +104,15 @@ const weekLabel = document.getElementById("weekLabel");
 
 let showOnlyFree=false;
 let currentMonday = getMonday(new Date());
-let currentUser = null;
 
-function getMonday(d){ const date = new Date(d); const day = date.getDay(); const diff = (day === 0 ? -6 : 1) - day; date.setDate(date.getDate() + diff); date.setHours(0,0,0,0); return date; }
+function getMonday(d){
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
 
 function crearTabla(){
   tbody.innerHTML = "";
@@ -122,7 +134,15 @@ function crearTabla(){
   });
 }
 
-function getWeekDates(monday){ return dias.map((dia,index)=>{ const d = new Date(monday); d.setDate(d.getDate() + index); const day = d.getDate().toString().padStart(2,'0'); const month = (d.getMonth()+1).toString().padStart(2,'0'); return `${dia} ${day}/${month}`; }); }
+function getWeekDates(monday){
+  return dias.map((dia,index)=>{
+    const d = new Date(monday);
+    d.setDate(d.getDate() + index);
+    const day = d.getDate().toString().padStart(2,'0');
+    const month = (d.getMonth()+1).toString().padStart(2,'0');
+    return `${dia} ${day}/${month}`;
+  });
+}
 
 function actualizarHeader(){
   thead.querySelectorAll("th:not(:first-child)").forEach(th=>th.remove());
@@ -130,10 +150,11 @@ function actualizarHeader(){
   fechas.forEach(fechaStr=>{
     const th=document.createElement("th");
     th.textContent = fechaStr;
-    th.classList.add("dia");
+    th.classList.add("dia"); // aplica fondo azul claro
     thead.appendChild(th);
   });
 
+  // Mostrar rango completo de la semana en el label
   const firstDay = new Date(currentMonday);
   const lastDay = new Date(currentMonday);
   lastDay.setDate(lastDay.getDate() + 6);
@@ -166,7 +187,7 @@ function aplicarFiltro(){
       td.classList.add("ocupado-filtro");
       if(input) input.disabled = true;
     } else if(input){
-      input.disabled = !currentUser;
+      input.disabled = false;
     }
   });
 }
@@ -175,6 +196,7 @@ function actualizarEstado(td){
   const input = td.querySelector("input");
   const val = input.value.trim();
 
+  // Calcular fecha y hora exacta del slot
   const slotDate = new Date(currentMonday);
   slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
   const [hour, min] = td.dataset.hora.split(":").map(Number);
@@ -206,9 +228,10 @@ function cargarSemana(){
     const data = snap.val() || {};
 
     tbody.querySelectorAll("td.slot").forEach(td=>{
+      // Creamos fecha YYYY-MM-DD para que cada semana sea independiente
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const fechaStr = slotDate.toISOString().split('T')[0];
+      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
       const key = `${fechaStr}_${td.dataset.hora}`;
       const val = data[key] || "";
@@ -219,12 +242,12 @@ function cargarSemana(){
         td.appendChild(input);
 
         input.onblur = ()=>{ 
-          if(currentUser) db.ref("citas/"+key).set(input.value.trim());
+          db.ref("citas/"+key).set(input.value.trim());
           actualizarEstado(td);
         };
         input.onkeydown = e=>{
           if(e.key==="Enter"){
-            if(currentUser) db.ref("citas/"+key).set(input.value.trim());
+            db.ref("citas/"+key).set(input.value.trim());
             actualizarEstado(td);
             input.blur();
           }
@@ -244,76 +267,8 @@ document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFi
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
-document.getElementById("loginBtn").onclick = ()=>{
-  const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email,pass)
-    .then(userCredential=>{
-      currentUser = userCredential.user;
-      document.getElementById("authContainer").style.display="none";
-      document.querySelector(".week-nav").style.display="flex";
-      document.querySelector(".controls").style.display="flex";
-      document.getElementById("calendar").style.display="table";
-      cargarSemana();
-    })
-    .catch(err=>{ document.getElementById("authMessage").textContent = err.message; });
-};
-
-document.getElementById("registerBtn").onclick = ()=>{
-  const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email,pass)
-    .then(userCredential=>{
-      currentUser = userCredential.user;
-      document.getElementById("authContainer").style.display="none";
-      document.querySelector(".week-nav").style.display="flex";
-      document.querySelector(".controls").style.display="flex";
-      document.getElementById("calendar").style.display="table";
-      cargarSemana();
-    })
-    .catch(err=>{ document.getElementById("authMessage").textContent = err.message; });
-};
-
-// Google Sign-In
-document.getElementById("googleLoginBtn").onclick = ()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-    .then(result=>{
-      currentUser = result.user;
-      document.getElementById("authContainer").style.display="none";
-      document.querySelector(".week-nav").style.display="flex";
-      document.querySelector(".controls").style.display="flex";
-      document.getElementById("calendar").style.display="table";
-      cargarSemana();
-    })
-    .catch(err=>{
-      document.getElementById("authMessage").textContent = err.message;
-    });
-};
-
-document.getElementById("logoutBtn").onclick = ()=>{
-  auth.signOut().then(()=>{
-    currentUser=null;
-    document.getElementById("authContainer").style.display="block";
-    document.querySelector(".week-nav").style.display="none";
-    document.querySelector(".controls").style.display="none";
-    document.getElementById("calendar").style.display="none";
-  });
-};
-
-// Mantener sesión activa
-auth.onAuthStateChanged(user=>{
-  if(user){
-    currentUser = user;
-    document.getElementById("authContainer").style.display="none";
-    document.querySelector(".week-nav").style.display="flex";
-    document.querySelector(".controls").style.display="flex";
-    document.getElementById("calendar").style.display="table";
-    cargarSemana();
-  } else {
-    currentUser = null;
-  }
-});
+// Inicializar
+cargarSemana();
 </script>
 </body>
 </html>
