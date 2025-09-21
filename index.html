@@ -11,6 +11,7 @@ h1 { text-align:center; color:#222; }
 button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; background:#2196f3; color:white; }
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
+#loginBtn { margin-bottom:10px; }
 table { width:100%; border-collapse: collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:0; text-align:center; height:35px; }
 th { background:#2196f3; color:white; }
@@ -57,6 +58,8 @@ thead th.dia {
 
 <h1>Citas Gavabarber</h1>
 
+<button id="loginBtn">Iniciar sesión con Google</button>
+
 <div class="week-nav">
   <button id="prevWeek">← Semana anterior</button>
   <span id="weekLabel">Semana actual</span>
@@ -75,6 +78,7 @@ thead th.dia {
 </table>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
@@ -90,6 +94,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.database();
 
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
@@ -101,9 +106,11 @@ const thead=table.querySelector("thead tr");
 const tbody=table.querySelector("tbody");
 const counterDiv=document.getElementById("counter");
 const weekLabel = document.getElementById("weekLabel");
+const loginBtn = document.getElementById("loginBtn");
 
 let showOnlyFree=false;
 let currentMonday = getMonday(new Date());
+let userLoggedIn = false;
 
 function getMonday(d){
   const date = new Date(d);
@@ -150,11 +157,10 @@ function actualizarHeader(){
   fechas.forEach(fechaStr=>{
     const th=document.createElement("th");
     th.textContent = fechaStr;
-    th.classList.add("dia"); // aplica fondo azul claro
+    th.classList.add("dia");
     thead.appendChild(th);
   });
 
-  // Mostrar rango completo de la semana en el label
   const firstDay = new Date(currentMonday);
   const lastDay = new Date(currentMonday);
   lastDay.setDate(lastDay.getDate() + 6);
@@ -187,7 +193,7 @@ function aplicarFiltro(){
       td.classList.add("ocupado-filtro");
       if(input) input.disabled = true;
     } else if(input){
-      input.disabled = false;
+      input.disabled = !userLoggedIn; // solo habilitado si está logueado
     }
   });
 }
@@ -196,7 +202,6 @@ function actualizarEstado(td){
   const input = td.querySelector("input");
   const val = input.value.trim();
 
-  // Calcular fecha y hora exacta del slot
   const slotDate = new Date(currentMonday);
   slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
   const [hour, min] = td.dataset.hora.split(":").map(Number);
@@ -230,7 +235,7 @@ function cargarSemana(){
     tbody.querySelectorAll("td.slot").forEach(td=>{
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const fechaStr = slotDate.toISOString().split('T')[0];
 
       const key = `${fechaStr}_${td.dataset.hora}`;
       const val = data[key] || "";
@@ -241,12 +246,12 @@ function cargarSemana(){
         td.appendChild(input);
 
         input.onblur = ()=>{ 
-          db.ref("citas/"+key).set(input.value.trim());
+          if(userLoggedIn) db.ref("citas/"+key).set(input.value.trim());
           actualizarEstado(td);
         };
         input.onkeydown = e=>{
           if(e.key==="Enter"){
-            db.ref("citas/"+key).set(input.value.trim());
+            if(userLoggedIn) db.ref("citas/"+key).set(input.value.trim());
             actualizarEstado(td);
             input.blur();
           }
@@ -266,13 +271,31 @@ document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFi
 document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
 document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
 
+// Login con Google
+loginBtn.onclick = ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+  .then(result=>{
+    userLoggedIn = true;
+    loginBtn.textContent = "Logueado: " + result.user.displayName;
+    cargarSemana();
+  })
+  .catch(error=>{
+    alert("Error al iniciar sesión: " + error.message);
+  });
+};
+
+// Detectar logout
+auth.onAuthStateChanged(user=>{
+  userLoggedIn = !!user;
+  if(!user){
+    loginBtn.textContent = "Iniciar sesión con Google";
+  }
+  cargarSemana();
+});
+
 // Inicializar
 cargarSemana();
-
-// Bloquea los slots pasados automáticamente cada minuto
-setInterval(()=>{
-  tbody.querySelectorAll("td.slot").forEach(td => actualizarEstado(td));
-}, 60000); // cada 60 segundos
 </script>
 </body>
 </html>
