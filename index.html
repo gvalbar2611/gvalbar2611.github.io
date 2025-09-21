@@ -12,22 +12,35 @@ button { padding: 8px 12px; border:none; border-radius:6px; cursor:pointer; back
 button:hover { background:#1976d2; }
 #counter { font-weight:bold; }
 table { width:100%; border-collapse: collapse; margin-top:10px; }
-th, td { border:1px solid #ccc; padding:5px; text-align:center; }
+th, td { border:1px solid #ccc; padding:0; text-align:center; height:35px; }
 th { background:#2196f3; color:white; }
 td.slot { min-width:80px; position:relative; }
 
-td.libre { background:#c8e6c9; cursor:text; }           
-td.ocupado { background:#ef9a9a; cursor:text; }        
-td.ocupado-filtro { background:#b0b0b0; cursor:text; } 
-td.pasado { background:#e0e0e0; cursor:not-allowed; }  
+/* Input ocupa toda la celda */
+td.slot input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 5px;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 14px;
+  background: transparent;
+}
 
-td.libre:hover { background:#a5d6a7; }           
-td.ocupado:hover { background:#ef6c6c; }         
-td.ocupado-filtro:hover { background:#999999; }  
+/* Estados de las celdas */
+td.libre input { background:#c8e6c9; cursor:text; }           
+td.ocupado input { background:#ef9a9a; cursor:text; }        
+td.ocupado-filtro input { background:#b0b0b0; cursor:text; } 
+td.pasado input { background:#e0e0e0; cursor:not-allowed; }  
+
+td.libre:hover input { background:#a5d6a7; }           
+td.ocupado:hover input { background:#ef6c6c; }         
+td.ocupado-filtro:hover input { background:#999999; }  
 
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; white-space: nowrap; }
-  th, td { padding: 8px 5px; font-size: 14px; min-width: 60px; }
+  th, td { padding: 0 5px; font-size: 14px; min-width: 60px; height:30px; }
   .controls, .week-nav { flex-direction: column; align-items: flex-start; gap: 5px; }
   button { padding: 6px 10px; font-size: 14px; }
 }
@@ -159,6 +172,27 @@ function aplicarFiltro(){
   });
 }
 
+function actualizarEstado(td){
+  const val = td.querySelector("input").value.trim();
+  td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
+  const slotDate = new Date(currentMonday);
+  slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
+  const now = new Date(); now.setHours(0,0,0,0);
+
+  if(slotDate < now){
+    td.classList.add("pasado");
+  } else if(val===""){
+    td.classList.add("libre");
+  } else {
+    td.classList.add("ocupado");
+    if(showOnlyFree){
+      td.classList.add("ocupado-filtro");
+    }
+  }
+  aplicarFiltro();
+  actualizarContador();
+}
+
 function cargarSemana(){
   crearTabla();
   actualizarHeader();
@@ -168,9 +202,6 @@ function cargarSemana(){
     const data = snap.val() || {};
 
     tbody.querySelectorAll("td.slot").forEach(td=>{
-      const slotDate = new Date(currentMonday);
-      slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-
       const key = `${td.dataset.dia}_${td.dataset.hora}`;
       const val = data[key] || "";
 
@@ -179,33 +210,24 @@ function cargarSemana(){
         input.value = val;
         td.appendChild(input);
 
-        input.onblur = ()=>{
+        input.onblur = ()=>{ 
           db.ref("citas/"+key).set(input.value.trim());
-          aplicarFiltro();
-          actualizarContador();
+          actualizarEstado(td);
         };
-        input.onkeydown = e=>{ if(e.key==="Enter") input.blur(); };
+        input.onkeydown = e=>{
+          if(e.key==="Enter"){
+            db.ref("citas/"+key).set(input.value.trim());
+            actualizarEstado(td);
+            input.blur();
+          }
+        };
       } else {
         td.querySelector("input").value = val;
       }
 
-      td.classList.remove("libre","ocupado","ocupado-filtro","pasado");
-      const now = new Date(); now.setHours(0,0,0,0);
-
-      if(slotDate < now){
-        td.classList.add("pasado");
-      } else if(val===""){
-        td.classList.add("libre");
-      } else {
-        td.classList.add("ocupado");
-        if(showOnlyFree){
-          td.classList.add("ocupado-filtro");
-        }
-      }
+      actualizarEstado(td);
     });
 
-    aplicarFiltro();
-    actualizarContador();
     weekLabel.textContent = `Semana del ${currentMonday.getDate()}/${currentMonday.getMonth()+1}`;
   });
 }
