@@ -155,7 +155,6 @@ function actualizarContador(){
   counterDiv.textContent="Clientes agendados: "+total;
 }
 
-// Aplica filtros y bloquea inputs
 function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
@@ -211,7 +210,12 @@ function cargarSemana(){
     const data = snap.val() || {};
 
     tbody.querySelectorAll("td.slot").forEach(td=>{
-      const key = `${td.dataset.dia}_${td.dataset.hora}`;
+      // Creamos fecha YYYY-MM-DD para que cada semana sea independiente
+      const slotDate = new Date(currentMonday);
+      slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
+      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      const key = `${fechaStr}_${td.dataset.hora}`;
       const val = data[key] || "";
 
       if(!td.querySelector("input")){
