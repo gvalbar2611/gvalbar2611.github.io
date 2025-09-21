@@ -183,20 +183,25 @@ function aplicarFiltro(){
   tbody.querySelectorAll("td.slot").forEach(td=>{
     td.classList.remove("ocupado-filtro");
     const input = td.querySelector("input");
+    const val = input ? input.value.trim() : "";
+
     if(td.classList.contains("pasado") || !userLoggedIn){
       if(input) input.disabled = true;
       return;
     }
-    // Bloqueo si el slot tiene uid distinto
+
+    // Bloqueo si slot tiene uid y no es del usuario
     if(td.dataset.uid && userLoggedIn && auth.currentUser.uid !== td.dataset.uid){
-      input.disabled = true;
+      if(input) input.disabled = true;
       td.classList.add("ocupado-filtro");
     } else {
-      input.disabled = false;
+      if(input) input.disabled = false;
+      td.classList.remove("ocupado-filtro");
     }
+
     if(showOnlyFree && td.classList.contains("ocupado")){
       td.classList.add("ocupado-filtro");
-      input.disabled = true;
+      if(input) input.disabled = true;
     }
   });
 }
@@ -210,6 +215,7 @@ function actualizarEstado(td){
   const [hour, min] = td.dataset.hora.split(":").map(Number);
   slotDate.setHours(hour, min, 0, 0);
   const now = new Date();
+
   if(slotDate < now){
     td.classList.add("pasado");
     if(input) input.disabled = true;
@@ -232,52 +238,37 @@ function cargarSemana(){
     tbody.querySelectorAll("td.slot").forEach(td=>{
       const slotDate = new Date(currentMonday);
       slotDate.setDate(slotDate.getDate() + dias.indexOf(td.dataset.dia));
-      const fechaStr = slotDate.toISOString().split('T')[0];
+      const fechaStr = slotDate.toISOString().split('T')[0]; // YYYY-MM-DD
       const key = `${fechaStr}_${td.dataset.hora}`;
-      const valObj = data[key] || {cliente:"", uid:""};
+      const valObj = data[key] || {};
+      const val = valObj.value || "";
+      const uid = valObj.uid || "";
 
       if(!td.querySelector("input")){
         const input = document.createElement("input");
-        input.value = valObj.cliente || "";
-        td.dataset.uid = valObj.uid || "";
+        input.value = val;
+        td.dataset.uid = uid;
         td.appendChild(input);
 
-        const actualizarCita = ()=>{
-          if(!userLoggedIn) return;
-          const user = auth.currentUser;
-          const nuevoValor = input.value.trim();
-
-          if(nuevoValor === ""){
-            db.ref("citas/"+key).remove();
-            td.dataset.uid = "";
-          } else {
-            db.ref("citas/"+key).set({cliente:nuevoValor, uid:user.uid});
-            td.dataset.uid = user.uid;
+        input.onblur = ()=>{
+          if(userLoggedIn){
+            db.ref("citas/"+key).set({value: input.value.trim(), uid: auth.currentUser.uid});
+            td.dataset.uid = auth.currentUser.uid;
+            actualizarEstado(td);
           }
-          actualizarEstado(td);
         };
 
-        input.onblur = actualizarCita;
         input.onkeydown = e=>{
-          if(e.key==="Enter"){
-            actualizarCita();
+          if(e.key==="Enter" && userLoggedIn){
+            db.ref("citas/"+key).set({value: input.value.trim(), uid: auth.currentUser.uid});
+            td.dataset.uid = auth.currentUser.uid;
+            actualizarEstado(td);
             input.blur();
           }
         };
       } else {
-        const input = td.querySelector("input");
-        input.value = valObj.cliente || "";
-        td.dataset.uid = valObj.uid || "";
-      }
-
-      const input = td.querySelector("input");
-      if(valObj.uid && userLoggedIn && auth.currentUser.uid !== valObj.uid){
-        input.disabled = true;
-        td.classList.add("ocupado-filtro");
-      } else if(userLoggedIn){
-        input.disabled = false;
-      } else {
-        input.disabled = true;
+        td.querySelector("input").value = val;
+        td.dataset.uid = uid;
       }
 
       actualizarEstado(td);
@@ -285,24 +276,16 @@ function cargarSemana(){
   });
 }
 
-// Botones filtros y navegación
-document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
-document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
-document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
-document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
-
-// Login y logout
+// Login y Logout
 loginBtn.onclick = ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-    .then(result=>{
-      userLoggedIn = true;
-      document.getElementById("loginScreen").style.display="none";
-      document.getElementById("calendarScreen").style.display="block";
-      logoutBtn.style.display="inline-block";
-      cargarSemana();
-    })
-    .catch(err=>{ alert("Error al iniciar sesión: "+err.message); });
+  auth.signInWithPopup(provider).then(result=>{
+    userLoggedIn = true;
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("calendarScreen").style.display="block";
+    logoutBtn.style.display="inline-block";
+    cargarSemana();
+  });
 };
 
 logoutBtn.onclick = ()=>{
@@ -313,16 +296,16 @@ logoutBtn.onclick = ()=>{
   });
 };
 
-// Inicializar
-auth.onAuthStateChanged(user=>{
-  if(user){
-    userLoggedIn = true;
-    document.getElementById("loginScreen").style.display="none";
-    document.getElementById("calendarScreen").style.display="block";
-    logoutBtn.style.display="inline-block";
-    cargarSemana();
-  }
-});
+// Botones de filtro y navegación
+document.getElementById("showAll").onclick = ()=>{ showOnlyFree=false; aplicarFiltro(); };
+document.getElementById("showFree").onclick = ()=>{ showOnlyFree=true; aplicarFiltro(); };
+document.getElementById("prevWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()-7); cargarSemana(); };
+document.getElementById("nextWeek").onclick = ()=>{ currentMonday.setDate(currentMonday.getDate()+7); cargarSemana(); };
+
+// Inicializar calendario (sin usuario logueado)
+crearTabla();
+actualizarHeader();
+aplicarFiltro();
 </script>
 </body>
 </html>
